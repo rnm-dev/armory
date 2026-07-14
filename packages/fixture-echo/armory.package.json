@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-echo",
+  "version": "1.0.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": [],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "fixture_echo"
+  }
+}

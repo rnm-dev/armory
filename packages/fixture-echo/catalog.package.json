@@ -1,0 +1,13 @@
+{
+  "id": "fixture-echo",
+  "displayName": "Fixture Echo",
+  "summary": "Deterministic no-credential echo package for Armory tests.",
+  "publisher": "rnm-dev",
+  "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/fixture-echo",
+  "requirements": {
+    "credentials": false,
+    "localDependencies": false,
+    "hostWrites": false
+  },
+  "testOnly": true
+}

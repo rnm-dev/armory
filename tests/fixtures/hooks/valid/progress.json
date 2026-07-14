@@ -1,0 +1,7 @@
+{
+  "protocolVersion": 1,
+  "type": "progress",
+  "phase": "writing_configuration",
+  "message": "Writing fixture configuration",
+  "percent": 50
+}

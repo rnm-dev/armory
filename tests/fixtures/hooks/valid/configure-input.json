@@ -1,0 +1,16 @@
+{
+  "protocolVersion": 1,
+  "type": "input",
+  "operation": "configure",
+  "package": {
+    "id": "fixture-configured",
+    "version": "1.0.0",
+    "dir": "/fixture/package",
+    "home": "/fixture/home"
+  },
+  "platform": { "os": "linux", "arch": "x64" },
+  "configuration": {
+    "projectName": "fixture-project",
+    "apiToken": "fixture-placeholder"
+  }
+}

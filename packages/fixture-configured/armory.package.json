@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-configured",
+  "version": "1.0.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": [],
+    "hostPaths": []
+  },
+  "dependencies": [
+    {
+      "id": "fixture-cli",
+      "displayName": "Fixture CLI",
+      "versionRange": "^1.0.0",
+      "strategies": [
+        {
+          "type": "package",
+          "executablePath": "dist/fake-cli.js",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  ],
+  "configuration": {
+    "fields": [
+      {
+        "id": "projectName",
+        "label": "Project name",
+        "type": "text",
+        "required": true,
+        "sensitive": false,
+        "validation": { "maxLength": 100 }
+      },
+      {
+        "id": "apiToken",
+        "label": "API token",
+        "type": "secret",
+        "required": true,
+        "sensitive": true,
+        "validation": { "maxLength": 200 }
+      },
+      {
+        "id": "region",
+        "label": "Region",
+        "type": "select",
+        "required": true,
+        "sensitive": false,
+        "options": [
+          { "value": "test-east", "label": "Test East" },
+          { "value": "test-west", "label": "Test West" }
+        ]
+      },
+      {
+        "id": "credentialsFile",
+        "label": "Credentials file",
+        "type": "file",
+        "required": true,
+        "sensitive": true,
+        "validation": { "maxLength": 1048576 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/config.json", "config/credentials-file.txt"],
+    "environment": {
+      "FIXTURE_CONFIG_FILE": "config/config.json"
+    }
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "fixture_configured"
+  }
+}

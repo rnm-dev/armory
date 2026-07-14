@@ -1,0 +1,7 @@
+{
+  "protocolVersion": 1,
+  "type": "result",
+  "ok": false,
+  "message": "Fixture verification failed",
+  "errorCode": "CONFIGURATION_INVALID"
+}

@@ -1,0 +1,7 @@
+{
+  "protocolVersion": 1,
+  "type": "result",
+  "ok": true,
+  "message": "Fixture configuration is ready",
+  "ownedPaths": ["config/config.json"]
+}

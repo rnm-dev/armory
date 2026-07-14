@@ -1,0 +1,5 @@
+{
+  "archive": "expanded-size.tar.gz",
+  "maxExpandedBytes": 1024,
+  "actualExpandedBytes": 2048
+}

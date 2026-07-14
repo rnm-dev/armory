@@ -39,6 +39,7 @@ const requiredKeys = ["id", "displayName", "summary", "publisher", "documentatio
 if (requiredKeys.some((key) => !(key in metadata)) || metadata.id !== id || metadata.publisher !== "rnm-dev") {
   throw new Error("Catalog metadata is incomplete or does not match the package");
 }
+if (metadata.testOnly === true) throw new Error("Test-only packages cannot be published to the production catalog");
 
 const manifest = await readJson(path.join(repoRoot, "packages", id, "armory.package.json"));
 const catalogPath = path.join(repoRoot, "armory.json");
@@ -61,7 +62,8 @@ try {
 }
 
 if (!entry) {
-  entry = { ...metadata, latest: build.version, versions: [] };
+  const { testOnly: _testOnly, ...catalogMetadata } = metadata;
+  entry = { ...catalogMetadata, latest: build.version, versions: [] };
   catalog.packages.push(entry);
 }
 entry.versions.push({

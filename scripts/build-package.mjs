@@ -41,6 +41,13 @@ for (const required of ["dist", "LICENSE", "THIRD_PARTY_NOTICES"]) {
 }
 
 const rootName = `${id}-${manifest.version}`;
+const executablePaths = new Set(
+  manifest.dependencies.flatMap((dependency) =>
+    dependency.strategies
+      .filter((strategy) => strategy.type === "package")
+      .map((strategy) => strategy.executablePath),
+  ),
+);
 const staging = await fs.mkdtemp(path.join(os.tmpdir(), "armory-build-"));
 const archiveRoot = path.join(staging, rootName);
 const outputDir = path.join(repoRoot, "dist");
@@ -59,7 +66,8 @@ try {
   const normalize = async (target) => {
     const stat = await fs.lstat(target);
     if (stat.isSymbolicLink()) throw new Error(`Package archives cannot contain symbolic links: ${target}`);
-    await fs.chmod(target, stat.isDirectory() ? 0o755 : 0o644);
+    const packageRelative = path.relative(archiveRoot, target).split(path.sep).join("/");
+    await fs.chmod(target, stat.isDirectory() || executablePaths.has(packageRelative) ? 0o755 : 0o644);
     await fs.utimes(target, new Date(0), new Date(0));
     archiveEntries.push(path.relative(staging, target).split(path.sep).join("/"));
     if (stat.isDirectory()) {

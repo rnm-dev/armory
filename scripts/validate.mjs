@@ -113,6 +113,27 @@ for (const dirent of packageDirs) {
   }
   if (manifest.id !== dirent.name) fail(`packages/${dirent.name}`, `manifest id ${manifest.id} does not match directory`);
   validateManifestSemantics(manifest, `packages/${dirent.name}`);
+  const metadataPath = path.join(packageRoot, dirent.name, "catalog.package.json");
+  try {
+    const metadata = await readJson(metadataPath);
+    const keys = Object.keys(metadata).sort();
+    const allowed = ["displayName", "documentationUrl", "id", "publisher", "requirements", "summary", "testOnly"];
+    if (keys.some((name) => !allowed.includes(name))) fail(`packages/${dirent.name}/catalog.package.json`, "contains unknown fields");
+    for (const required of ["id", "displayName", "summary", "publisher", "documentationUrl", "requirements"]) {
+      if (!(required in metadata)) fail(`packages/${dirent.name}/catalog.package.json`, `missing ${required}`);
+    }
+    if (metadata.id !== manifest.id || metadata.publisher !== "rnm-dev") fail(`packages/${dirent.name}/catalog.package.json`, "identity does not match manifest/publisher");
+    validateHttpsUrl(metadata.documentationUrl, `packages/${dirent.name}/catalog.package.json.documentationUrl`, ["github.com"], `/rnm-dev/armory/`);
+    const expectedRequirements = {
+      credentials: Boolean(manifest.configuration?.fields.some((field) => field.required || field.sensitive)),
+      localDependencies: manifest.dependencies.length > 0,
+      hostWrites: manifest.permissions.hostPaths.some((entry) => entry.mode === "write"),
+    };
+    if (JSON.stringify(metadata.requirements) !== JSON.stringify(expectedRequirements)) fail(`packages/${dirent.name}/catalog.package.json`, "requirements do not summarize manifest");
+    if (metadata.testOnly === true && catalogById.has(manifest.id)) fail(`packages/${dirent.name}`, "test-only package cannot appear in production armory.json");
+  } catch (error) {
+    fail(`packages/${dirent.name}`, `cannot read catalog.package.json: ${error.message}`);
+  }
   const catalogEntry = catalogById.get(manifest.id);
   const listed = catalogEntry?.versions.find((version) => version.version === manifest.version);
   if (listed) {
@@ -127,7 +148,7 @@ for (const dirent of packageDirs) {
   }
 }
 
-const hookFixtureRoot = path.join(repoRoot, "tests", "fixtures", "hooks");
+const hookFixtureRoot = path.join(repoRoot, "tests", "fixtures", "hooks", "valid");
 for (const entry of await fs.readdir(hookFixtureRoot, { withFileTypes: true }).catch(() => [])) {
   if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
   const fixture = await readJson(path.join(hookFixtureRoot, entry.name));
@@ -136,6 +157,8 @@ for (const entry of await fs.readdir(hookFixtureRoot, { withFileTypes: true }).c
 
 const generated = spawnSync(process.execPath, [path.join(repoRoot, "scripts", "generate-types.mjs"), "--check"], { encoding: "utf8" });
 if (generated.status !== 0) fail("src/generated", (generated.stderr || generated.stdout).trim());
+const archives = spawnSync(process.execPath, [path.join(repoRoot, "tests", "fixtures", "archives", "generate.mjs"), "--check"], { encoding: "utf8" });
+if (archives.status !== 0) fail("tests/fixtures/archives/generated", (archives.stderr || archives.stdout).trim());
 
 if (errors.length) {
   console.error(errors.map((error) => `- ${error}`).join("\n"));
