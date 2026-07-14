@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rnm-dev/armory/main/schemas/package-v1.schema.json",
+  "title": "ArmoryManifestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "minPeonVersion", "platforms", "permissions", "dependencies", "mcp"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/semver" },
+    "minPeonVersion": { "$ref": "#/$defs/semver" },
+    "platforms": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/platform" } },
+    "permissions": { "$ref": "#/$defs/permissions" },
+    "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+    "configuration": { "$ref": "#/$defs/configuration" },
+    "lifecycle": { "$ref": "#/$defs/lifecycle" },
+    "mcp": { "$ref": "#/$defs/mcp" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "fieldId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,62}$" },
+    "semver": { "type": "string", "format": "semver" },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch"],
+      "properties": {
+        "os": { "enum": ["darwin", "linux"] },
+        "arch": { "enum": ["x64", "arm64"] }
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "size", "sha256"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "pattern": "^https://github\\.com/rnm-dev/armory/releases/download/" },
+        "size": { "type": "integer", "minimum": 1, "maximum": 268435456 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "args"],
+      "properties": {
+        "executable": {
+          "type": "string",
+          "pattern": "^(?:node|dependency:[a-z0-9][a-z0-9-]{0,62}|(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+)$"
+        },
+        "args": { "type": "array", "maxItems": 128, "items": { "type": "string", "maxLength": 4096 } }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["networkHosts", "hostPaths"],
+      "properties": {
+        "networkHosts": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(?:\\*\\.)?[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$" }
+        },
+        "hostPaths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "mode", "purpose"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^(?:/|~/).+" },
+              "mode": { "enum": ["read", "write"] },
+              "purpose": { "type": "string", "minLength": 1, "maxLength": 500 }
+            }
+          }
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "type", "required", "sensitive"],
+      "properties": {
+        "id": { "$ref": "#/$defs/fieldId" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "help": { "type": "string", "maxLength": 1000 },
+        "type": { "enum": ["text", "secret", "select", "file"] },
+        "required": { "type": "boolean" },
+        "sensitive": { "type": "boolean" },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string", "maxLength": 500 },
+              "label": { "type": "string", "minLength": 1, "maxLength": 120 }
+            }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pattern": { "type": "string", "maxLength": 512 },
+            "maxLength": { "type": "integer", "minimum": 1, "maximum": 1048576 }
+          }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "select" } } }, "then": { "required": ["options"] }, "else": { "not": { "required": ["options"] } } },
+        { "if": { "properties": { "type": { "const": "secret" } } }, "then": { "properties": { "sensitive": { "const": true } } } }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields", "handler", "managedPaths"],
+      "properties": {
+        "fields": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/field" } },
+        "handler": { "$ref": "#/$defs/command" },
+        "verifyHandler": { "$ref": "#/$defs/command" },
+        "managedPaths": { "type": "array", "items": { "$ref": "#/$defs/relativePath" } },
+        "environment": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]{0,127}$" },
+          "additionalProperties": { "$ref": "#/$defs/relativePath" }
+        }
+      }
+    },
+    "versionParser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "pattern"],
+      "properties": {
+        "source": { "enum": ["stdout", "stderr"] },
+        "pattern": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "dependencyStrategy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "command", "args", "version"],
+          "properties": {
+            "type": { "const": "external" },
+            "command": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+$" },
+            "args": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 4096 } },
+            "version": { "$ref": "#/$defs/versionParser" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "platforms"],
+          "properties": {
+            "type": { "const": "managed" },
+            "platforms": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["os", "arch", "archive", "format", "executablePath", "version"],
+                "properties": {
+                  "os": { "enum": ["darwin", "linux"] },
+                  "arch": { "enum": ["x64", "arm64"] },
+                  "archive": { "$ref": "#/$defs/archive" },
+                  "format": { "enum": ["tar.gz", "zip", "binary"] },
+                  "executablePath": { "$ref": "#/$defs/relativePath" },
+                  "version": { "$ref": "#/$defs/semver" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "executablePath", "version"],
+          "properties": {
+            "type": { "const": "package" },
+            "executablePath": { "$ref": "#/$defs/relativePath" },
+            "version": { "$ref": "#/$defs/semver" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "platforms"],
+          "properties": {
+            "type": { "const": "manual" },
+            "platforms": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["os", "arch", "instructions"],
+                "properties": {
+                  "os": { "enum": ["darwin", "linux"] },
+                  "arch": { "enum": ["x64", "arm64"] },
+                  "instructions": { "type": "string", "minLength": 1, "maxLength": 4000 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "versionRange", "strategies"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "versionRange": { "type": "string", "format": "semver-range", "maxLength": 256 },
+        "strategies": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/dependencyStrategy" } },
+        "verify": { "$ref": "#/$defs/command" }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "postInstall": { "$ref": "#/$defs/command" },
+        "preUninstall": { "$ref": "#/$defs/command" }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "toolPrefix"],
+      "properties": {
+        "command": { "$ref": "#/$defs/command" },
+        "toolPrefix": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,62}$" },
+        "startupTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 15000 },
+        "callTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 }
+      }
+    }
+  }
+}

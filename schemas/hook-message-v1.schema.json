@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rnm-dev/armory/main/schemas/hook-message-v1.schema.json",
+  "title": "ArmoryHookMessageV1",
+  "oneOf": [
+    { "$ref": "#/$defs/postInstallInput" },
+    { "$ref": "#/$defs/configureInput" },
+    { "$ref": "#/$defs/verifyInput" },
+    { "$ref": "#/$defs/preUninstallInput" },
+    { "$ref": "#/$defs/progress" },
+    { "$ref": "#/$defs/successResult" },
+    { "$ref": "#/$defs/failureResult" }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "semver": { "type": "string", "format": "semver" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch"],
+      "properties": {
+        "os": { "enum": ["darwin", "linux"] },
+        "arch": { "enum": ["x64", "arm64"] }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "dir", "home"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "$ref": "#/$defs/semver" },
+        "dir": { "type": "string", "minLength": 1 },
+        "home": { "type": "string", "minLength": 1 }
+      }
+    },
+    "postInstallInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "operation", "package", "platform"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "input" },
+        "operation": { "const": "post_install" },
+        "package": { "$ref": "#/$defs/package" },
+        "platform": { "$ref": "#/$defs/platform" }
+      }
+    },
+    "configureInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "operation", "package", "platform", "configuration"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "input" },
+        "operation": { "const": "configure" },
+        "package": { "$ref": "#/$defs/package" },
+        "platform": { "$ref": "#/$defs/platform" },
+        "configuration": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_]{0,62}$" },
+          "additionalProperties": { "type": "string", "maxLength": 1048576 }
+        }
+      }
+    },
+    "verifyInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "operation", "package", "platform"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "input" },
+        "operation": { "const": "verify" },
+        "package": { "$ref": "#/$defs/package" },
+        "platform": { "$ref": "#/$defs/platform" }
+      }
+    },
+    "preUninstallInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "operation", "package", "platform"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "input" },
+        "operation": { "const": "pre_uninstall" },
+        "package": { "$ref": "#/$defs/package" },
+        "platform": { "$ref": "#/$defs/platform" }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "phase", "message", "percent"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "progress" },
+        "phase": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 }
+      }
+    },
+    "successResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "ok", "message"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "result" },
+        "ok": { "const": true },
+        "message": { "type": "string", "maxLength": 1000 },
+        "ownedPaths": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "failureResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "type", "ok", "message", "errorCode"],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "type": { "const": "result" },
+        "ok": { "const": false },
+        "message": { "type": "string", "maxLength": 1000 },
+        "errorCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,127}$" }
+      }
+    }
+  }
+}
