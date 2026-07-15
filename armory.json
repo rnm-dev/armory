@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-15T13:23:38.145Z",
+  "updatedAt": "2026-07-15T13:24:01.604Z",
   "packages": [
     {
       "id": "heroboard",
@@ -163,6 +163,47 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-analytics-v0.1.0/google-analytics-0.1.0.tar.gz",
             "size": 502119,
             "sha256": "df6d6e94b46e4af876e42e506399af14da3af94838536e2b9116ef63af59de17"
+          }
+        }
+      ]
+    },
+    {
+      "id": "google-search-console",
+      "displayName": "Google Search Console",
+      "summary": "Inspect properties, search performance, sitemaps, and Google index status.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-search-console",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "0.1.0",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-search-console-v0.1.0/google-search-console-0.1.0.tar.gz",
+            "size": 192432,
+            "sha256": "c8beb876a5dc6a90c69f25cb9ad4f5548fff9e01ed504d713d57a702559ddcef"
           }
         }
       ]
