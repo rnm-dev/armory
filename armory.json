@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-15T13:23:11.607Z",
+  "updatedAt": "2026-07-15T13:23:38.145Z",
   "packages": [
     {
       "id": "heroboard",
@@ -122,6 +122,47 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-ads-v0.1.0/google-ads-0.1.0.tar.gz",
             "size": 192297,
             "sha256": "a5534713b2ab3f6092ff7a4412ab8b2edf2d5858bbe92808b9ac6ac43d19385a"
+          }
+        }
+      ]
+    },
+    {
+      "id": "google-analytics",
+      "displayName": "Google Analytics",
+      "summary": "Query GA4 data, administer Analytics resources, delete user data, and send Measurement Protocol events.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-analytics",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "0.1.0",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-analytics-v0.1.0/google-analytics-0.1.0.tar.gz",
+            "size": 502119,
+            "sha256": "df6d6e94b46e4af876e42e506399af14da3af94838536e2b9116ef63af59de17"
           }
         }
       ]
