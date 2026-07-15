@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-15T13:24:01.604Z",
+  "updatedAt": "2026-07-15T16:09:45.671Z",
   "packages": [
     {
       "id": "heroboard",
@@ -204,6 +204,47 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-search-console-v0.1.0/google-search-console-0.1.0.tar.gz",
             "size": 192432,
             "sha256": "c8beb876a5dc6a90c69f25cb9ad4f5548fff9e01ed504d713d57a702559ddcef"
+          }
+        }
+      ]
+    },
+    {
+      "id": "image-generator",
+      "displayName": "Image Generator",
+      "summary": "Generate images with Imagen 4 models through the Gemini API.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/image-generator",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "0.1.0",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/image-generator-v0.1.0/image-generator-0.1.0.tar.gz",
+            "size": 191096,
+            "sha256": "6ad6cd1e56fd1d7c42f66fef0b3e19299d564ab9df0419e152ea0cfac0478cc7"
           }
         }
       ]
