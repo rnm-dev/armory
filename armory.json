@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-15T12:51:27.884Z",
+  "updatedAt": "2026-07-15T13:22:46.228Z",
   "packages": [
     {
       "id": "heroboard",
@@ -40,6 +40,47 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/heroboard-v1.0.0/heroboard-1.0.0.tar.gz",
             "size": 124970,
             "sha256": "92db931440581a4370092dbc8c225962df93f25b9128734b4e0b606da106a3fd"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "displayName": "Cloudflare",
+      "summary": "Manage Cloudflare DNS zones, records, and remotely configured tunnels.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/cloudflare",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "0.1.0",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/cloudflare-v0.1.0/cloudflare-0.1.0.tar.gz",
+            "size": 192075,
+            "sha256": "8ff376a053ca834de43426c939844587f469ed10446e9eef59f70febfc6788a8"
           }
         }
       ]
