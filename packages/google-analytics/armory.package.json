@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "id": "google-analytics",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": [
+      "analyticsadmin.googleapis.com",
+      "analyticsdata.googleapis.com",
+      "analytics.googleapis.com",
+      "oauth2.googleapis.com",
+      "www.googleapis.com",
+      "www.google-analytics.com",
+      "region1.google-analytics.com"
+    ],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "credentialJson",
+        "label": "Google credential JSON",
+        "help": "Recommended: in Google Cloud Console, open IAM & Admin > Service Accounts, select or create a service account, then open Keys > Add key > Create new key > JSON and paste the entire downloaded file. In Google Analytics, add its client_email under Admin > Account or Property access management. An authorized_user JSON with a refresh token is also accepted.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 1048576 }
+      },
+      {
+        "id": "defaultPropertyId",
+        "label": "Default GA4 property ID",
+        "help": "Optional. In Google Analytics, open Admin > Property settings and copy the numeric Property ID. It is also shown in the property selector. Used when a tool call omits propertyId.",
+        "type": "text",
+        "required": false,
+        "validation": { "pattern": "^[0-9]{1,32}$", "maxLength": 32 }
+      },
+      {
+        "id": "measurementId",
+        "label": "Measurement ID",
+        "help": "Optional. For web, open Google Analytics > Admin > Data streams, select the web stream, and copy its Measurement ID (G-...). For apps, copy the Firebase App ID from Firebase Console > Project settings > Your apps.",
+        "type": "text",
+        "required": false,
+        "validation": { "maxLength": 256 }
+      },
+      {
+        "id": "measurementApiSecret",
+        "label": "Measurement Protocol API secret",
+        "help": "Optional. Open Google Analytics > Admin > Data streams, select the matching stream, open Measurement Protocol API secrets, choose Create, and paste the generated Secret value. Configure this together with Measurement ID.",
+        "type": "secret",
+        "required": false,
+        "validation": { "maxLength": 4096 }
+      },
+      {
+        "id": "measurementRegion",
+        "label": "Measurement region",
+        "help": "Choose the global or EU collection endpoint.",
+        "type": "select",
+        "required": true,
+        "options": [
+          { "value": "global", "label": "Global" },
+          { "value": "eu", "label": "European Union" }
+        ]
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/google-analytics.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "google_analytics",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}

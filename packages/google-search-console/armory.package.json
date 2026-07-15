@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "google-search-console",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["oauth2.googleapis.com", "searchconsole.googleapis.com", "www.googleapis.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "serviceAccountFile",
+        "label": "Service account JSON",
+        "help": "In Google Cloud Console, go to IAM & Admin > Service Accounts, open or create an account, then choose Keys > Add key > Create new key > JSON. In each Search Console property, go to Settings > Users and permissions > Add user and grant access to the JSON file's client_email. Select that downloaded JSON file here.",
+        "type": "file",
+        "required": true,
+        "validation": { "maxLength": 1048576 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/google-search-console.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "google_search_console",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}

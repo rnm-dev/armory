@@ -1,0 +1,19 @@
+import { CloudflareClient } from "../client.js";
+import { readConfig } from "../config.js";
+import { readInput, result } from "./protocol.js";
+
+try {
+  const input = await readInput();
+  if (input.operation !== "verify") throw new Error("invalid verify input");
+  const config = await readConfig(input.package.home);
+  const client = new CloudflareClient(config);
+  await client.request<{ status: string }>("/user/tokens/verify");
+  await Promise.all([
+    client.request(`/zones?account.id=${config.accountId}&page=1&per_page=5`),
+    client.request(`/accounts/${config.accountId}/cfd_tunnel?is_deleted=false&page=1&per_page=1`),
+  ]);
+  result({ ok: true, message: "Cloudflare connection verified" });
+} catch {
+  result({ ok: false, message: "Cloudflare connection could not be verified", errorCode: "VERIFICATION_FAILED" });
+  process.exitCode = 1;
+}

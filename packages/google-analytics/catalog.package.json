@@ -1,0 +1,11 @@
+{
+  "id": "google-analytics",
+  "displayName": "Google Analytics",
+  "summary": "Query GA4 data, administer Analytics resources, delete user data, and send Measurement Protocol events.",
+  "publisher": "rnm-dev",
+  "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-analytics",
+  "requirements": {
+    "credentials": true,
+    "hostWrites": false
+  }
+}

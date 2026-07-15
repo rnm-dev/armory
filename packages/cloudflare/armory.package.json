@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "cloudflare",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["api.cloudflare.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "apiToken",
+        "label": "API token",
+        "help": "In the Cloudflare dashboard, open My Profile > API Tokens, select Create Token, and create a custom token for the required accounts and zones. Grant Zone Zone Edit, Zone DNS Edit, and Cloudflare Tunnel Write permissions. Create the token, copy the secret shown once, and paste it here.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 4096 }
+      },
+      {
+        "id": "accountId",
+        "label": "Account ID",
+        "help": "In the Cloudflare dashboard, open Account home, find the account that owns the zones and tunnels, open the menu at the end of its row, and select Copy account ID. Paste the 32-character ID here.",
+        "type": "text",
+        "required": true,
+        "validation": { "pattern": "^[0-9a-fA-F]{32}$", "maxLength": 32 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/cloudflare.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "cloudflare",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}

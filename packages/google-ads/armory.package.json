@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "google-ads",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["googleads.googleapis.com", "oauth2.googleapis.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "developerToken",
+        "label": "Developer token",
+        "help": "Sign in to your Google Ads manager account, open https://ads.google.com/aw/apicenter, apply for API access if needed, then copy the developer token shown in API Center.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 256 }
+      },
+      {
+        "id": "clientId",
+        "label": "OAuth client ID",
+        "help": "In Google Cloud Console, configure the OAuth consent screen with the https://www.googleapis.com/auth/adwords scope, then go to APIs & Services > Credentials, create an OAuth client ID (Desktop app is recommended for single-user access), and copy its client ID.",
+        "type": "text",
+        "required": true,
+        "validation": { "maxLength": 512 }
+      },
+      {
+        "id": "clientSecret",
+        "label": "OAuth client secret",
+        "help": "Copy the client_secret paired with the OAuth client ID from Google Cloud Console > APIs & Services > Credentials, or from that client's downloaded credentials JSON file.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 4096 }
+      },
+      {
+        "id": "refreshToken",
+        "label": "OAuth refresh token",
+        "help": "Follow https://developers.google.com/google-ads/api/docs/oauth/single-user-authentication using the OAuth client's downloaded JSON file. After gcloud application-default login completes with the adwords scope, copy refresh_token from the generated application_default_credentials.json file.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 8192 }
+      },
+      {
+        "id": "loginCustomerId",
+        "label": "Manager customer ID",
+        "help": "Optional. In Google Ads, select the manager account used to access client accounts and copy its 10-digit customer ID from the account selector or page header. Remove hyphens before entering it; for example, enter 1234567890 instead of 123-456-7890.",
+        "type": "text",
+        "required": false,
+        "validation": { "pattern": "^[0-9]{10}$", "maxLength": 10 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/google-ads.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "google_ads",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}

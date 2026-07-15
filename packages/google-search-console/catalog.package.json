@@ -1,0 +1,11 @@
+{
+  "id": "google-search-console",
+  "displayName": "Google Search Console",
+  "summary": "Inspect properties, search performance, sitemaps, and Google index status.",
+  "publisher": "rnm-dev",
+  "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-search-console",
+  "requirements": {
+    "credentials": true,
+    "hostWrites": false
+  }
+}
