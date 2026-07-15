@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "image-generator",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["generativelanguage.googleapis.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "apiKey",
+        "label": "Gemini API key",
+        "help": "Create an API key in Google AI Studio and paste it here. The key is stored in Peon's protected Armory home and is never included in tool arguments or output.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 4096 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/image-generator.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "image_generator",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}
