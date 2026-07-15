@@ -1,6 +1,48 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-14T00:00:00.000Z",
-  "packages": []
+  "updatedAt": "2026-07-15T12:51:27.884Z",
+  "packages": [
+    {
+      "id": "heroboard",
+      "displayName": "Heroboard",
+      "summary": "Track projects, tasks, progress, and XP from your coding agent.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/heroboard",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "1.0.0",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/heroboard-v1.0.0/heroboard-1.0.0.tar.gz",
+            "size": 124970,
+            "sha256": "92db931440581a4370092dbc8c225962df93f25b9128734b4e0b606da106a3fd"
+          }
+        }
+      ]
+    }
+  ]
 }
