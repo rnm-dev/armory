@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { readJson, repoRoot } from "./schema-utils.mjs";
+import { readJson, repoRoot, summarizeRequirements } from "./schema-utils.mjs";
 
 const argv = process.argv.slice(2);
 const id = argv[0];
@@ -42,6 +42,10 @@ if (requiredKeys.some((key) => !(key in metadata)) || metadata.id !== id || meta
 if (metadata.testOnly === true) throw new Error("Test-only packages cannot be published to the production catalog");
 
 const manifest = await readJson(path.join(repoRoot, "packages", id, "armory.package.json"));
+const requirements = summarizeRequirements(manifest);
+if (JSON.stringify(metadata.requirements) !== JSON.stringify(requirements)) {
+  throw new Error("Catalog requirements do not summarize the package manifest");
+}
 const catalogPath = path.join(repoRoot, "armory.json");
 const catalog = await readJson(catalogPath);
 let entry = catalog.packages.find((candidate) => candidate.id === id);
@@ -63,9 +67,10 @@ try {
 
 if (!entry) {
   const { testOnly: _testOnly, ...catalogMetadata } = metadata;
-  entry = { ...catalogMetadata, latest: build.version, versions: [] };
+  entry = { ...catalogMetadata, requirements, latest: build.version, versions: [] };
   catalog.packages.push(entry);
 }
+entry.requirements = requirements;
 entry.versions.push({
   version: build.version,
   minPeonVersion: manifest.minPeonVersion,

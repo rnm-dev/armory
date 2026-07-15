@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "heroboard",
+  "version": "1.0.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["heroboard.app"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "apiKey",
+        "label": "API key",
+        "help": "Create an agent API key in Heroboard and paste it here.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 4096 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/heroboard.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "heroboard",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}

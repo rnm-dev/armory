@@ -12,8 +12,6 @@ export type {
   Command as ArmoryCommandV1,
   Configuration as ArmoryConfigurationV1,
   Field as ArmoryConfigurationFieldV1,
-  Dependency as ArmoryDependencyV1,
-  DependencyStrategy as ArmoryDependencyStrategyV1,
 } from "./generated/package-v1.js";
 export type {
   ArmoryHookMessageV1,

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import semver from "semver";
-import { formatAjvErrors, loadValidators, readJson, repoRoot } from "./schema-utils.mjs";
+import { formatAjvErrors, loadValidators, readJson, repoRoot, summarizeRequirements } from "./schema-utils.mjs";
 
 const OFFICIAL_RELEASE_PREFIX = "/rnm-dev/armory/releases/download/";
 const errors = [];
@@ -31,7 +31,6 @@ function validateHttpsUrl(value, where, hosts, pathPrefix) {
 
 function validateManifestSemantics(manifest, where) {
   unique(manifest.platforms.map(key), `${where}.platforms`);
-  unique(manifest.dependencies.map((dependency) => dependency.id), `${where}.dependencies`);
   unique(manifest.permissions.networkHosts, `${where}.permissions.networkHosts`);
   unique(manifest.permissions.hostPaths.map((entry) => `${entry.mode}:${entry.path}`), `${where}.permissions.hostPaths`);
 
@@ -49,22 +48,6 @@ function validateManifestSemantics(manifest, where) {
     }
   }
 
-  for (const dependency of manifest.dependencies) {
-    if (!semver.validRange(dependency.versionRange) || dependency.versionRange === "*") {
-      fail(`${where}.dependencies.${dependency.id}`, "invalid or unrestricted version range");
-    }
-    for (const strategy of dependency.strategies) {
-      if ("platforms" in strategy) unique(strategy.platforms.map(key), `${where}.dependencies.${dependency.id}.${strategy.type}.platforms`);
-      if (strategy.type === "managed") {
-        for (const platform of strategy.platforms) {
-          validateHttpsUrl(platform.archive.url, `${where}.dependencies.${dependency.id}.archive`, ["github.com"], OFFICIAL_RELEASE_PREFIX);
-        }
-      }
-      if (strategy.type === "external") {
-        try { new RegExp(strategy.version.pattern); } catch { fail(`${where}.dependencies.${dependency.id}.version`, "invalid version pattern"); }
-      }
-    }
-  }
 }
 
 const validators = await loadValidators();
@@ -124,11 +107,7 @@ for (const dirent of packageDirs) {
     }
     if (metadata.id !== manifest.id || metadata.publisher !== "rnm-dev") fail(`packages/${dirent.name}/catalog.package.json`, "identity does not match manifest/publisher");
     validateHttpsUrl(metadata.documentationUrl, `packages/${dirent.name}/catalog.package.json.documentationUrl`, ["github.com"], `/rnm-dev/armory/`);
-    const expectedRequirements = {
-      credentials: Boolean(manifest.configuration?.fields.some((field) => field.required || field.sensitive)),
-      localDependencies: manifest.dependencies.length > 0,
-      hostWrites: manifest.permissions.hostPaths.some((entry) => entry.mode === "write"),
-    };
+    const expectedRequirements = summarizeRequirements(manifest);
     if (JSON.stringify(metadata.requirements) !== JSON.stringify(expectedRequirements)) fail(`packages/${dirent.name}/catalog.package.json`, "requirements do not summarize manifest");
     if (metadata.testOnly === true && catalogById.has(manifest.id)) fail(`packages/${dirent.name}`, "test-only package cannot appear in production armory.json");
   } catch (error) {
@@ -139,11 +118,7 @@ for (const dirent of packageDirs) {
   if (listed) {
     if (listed.minPeonVersion !== manifest.minPeonVersion) fail(`packages/${dirent.name}`, "catalog and manifest minPeonVersion differ");
     if (JSON.stringify(listed.platforms) !== JSON.stringify(manifest.platforms)) fail(`packages/${dirent.name}`, "catalog and manifest platforms differ");
-    const expectedRequirements = {
-      credentials: Boolean(manifest.configuration?.fields.some((field) => field.required || field.sensitive)),
-      localDependencies: manifest.dependencies.length > 0,
-      hostWrites: manifest.permissions.hostPaths.some((entry) => entry.mode === "write"),
-    };
+    const expectedRequirements = summarizeRequirements(manifest);
     if (JSON.stringify(expectedRequirements) !== JSON.stringify(catalogEntry.requirements)) fail(`packages/${dirent.name}`, "catalog requirements do not summarize manifest");
   }
 }

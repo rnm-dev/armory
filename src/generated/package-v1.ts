@@ -2,67 +2,7 @@
 
 export type Id = string;
 export type Semver = string;
-export type DependencyStrategy =
-  | {
-      type: "external";
-      command: string;
-      /**
-       * @maxItems 64
-       */
-      args: string[];
-      version: VersionParser;
-    }
-  | {
-      type: "managed";
-      /**
-       * @minItems 1
-       */
-      platforms: [
-        {
-          os: "darwin" | "linux";
-          arch: "x64" | "arm64";
-          archive: Archive;
-          format: "tar.gz" | "zip" | "binary";
-          executablePath: RelativePath;
-          version: Semver;
-        },
-        ...{
-          os: "darwin" | "linux";
-          arch: "x64" | "arm64";
-          archive: Archive;
-          format: "tar.gz" | "zip" | "binary";
-          executablePath: RelativePath;
-          version: Semver;
-        }[]
-      ];
-    }
-  | {
-      type: "package";
-      executablePath: RelativePath;
-      version: Semver;
-    }
-  | {
-      type: "manual";
-      /**
-       * @minItems 1
-       */
-      platforms: [
-        {
-          os: "darwin" | "linux";
-          arch: "x64" | "arm64";
-          instructions: string;
-        },
-        ...{
-          os: "darwin" | "linux";
-          arch: "x64" | "arm64";
-          instructions: string;
-        }[]
-      ];
-    };
-export type RelativePath = string;
 export type Field = {
-  [k: string]: any;
-} & {
   [k: string]: any;
 } & {
   id: FieldId;
@@ -70,7 +10,6 @@ export type Field = {
   help?: string;
   type: "text" | "secret" | "select" | "file";
   required: boolean;
-  sensitive: boolean;
   /**
    * @minItems 1
    */
@@ -94,7 +33,6 @@ export type Field = {
   help?: string;
   type: "text" | "secret" | "select" | "file";
   required: boolean;
-  sensitive: boolean;
   /**
    * @minItems 1
    */
@@ -114,6 +52,7 @@ export type Field = {
   };
 };
 export type FieldId = string;
+export type RelativePath = string;
 
 export interface ArmoryManifestV1 {
   schemaVersion: 1;
@@ -125,7 +64,10 @@ export interface ArmoryManifestV1 {
    */
   platforms: [Platform, ...Platform[]];
   permissions: Permissions;
-  dependencies: Dependency[];
+  /**
+   * @maxItems 0
+   */
+  dependencies: [];
   configuration?: Configuration;
   lifecycle?: Lifecycle;
   mcp: Mcp;
@@ -142,32 +84,6 @@ export interface Permissions {
     purpose: string;
   }[];
 }
-export interface Dependency {
-  id: Id;
-  displayName: string;
-  versionRange: string;
-  /**
-   * @minItems 1
-   */
-  strategies: [DependencyStrategy, ...DependencyStrategy[]];
-  verify?: Command;
-}
-export interface VersionParser {
-  source: "stdout" | "stderr";
-  pattern: string;
-}
-export interface Archive {
-  url: string;
-  size: number;
-  sha256: string;
-}
-export interface Command {
-  executable: string;
-  /**
-   * @maxItems 128
-   */
-  args: string[];
-}
 export interface Configuration {
   /**
    * @minItems 1
@@ -179,6 +95,13 @@ export interface Configuration {
   environment?: {
     [k: string]: RelativePath;
   };
+}
+export interface Command {
+  executable: string;
+  /**
+   * @maxItems 128
+   */
+  args: string[];
 }
 export interface Lifecycle {
   postInstall?: Command;

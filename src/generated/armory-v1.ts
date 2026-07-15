@@ -18,7 +18,6 @@ export interface Package {
   latest: Semver;
   requirements: {
     credentials: boolean;
-    localDependencies: boolean;
     hostWrites: boolean;
   };
   /**

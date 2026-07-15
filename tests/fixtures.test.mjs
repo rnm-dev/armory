@@ -68,7 +68,12 @@ test("package fixture source has no network, real-home, or privilege behavior", 
       else if (/\.(?:ts|mjs|js)$/.test(entry.name)) sourceFiles.push(target);
     }
   };
-  await visit(path.join(repoRoot, "packages"));
+  const packageEntries = await fs.readdir(path.join(repoRoot, "packages"), { withFileTypes: true });
+  for (const entry of packageEntries) {
+    if (entry.isDirectory() && entry.name.startsWith("fixture-")) {
+      await visit(path.join(repoRoot, "packages", entry.name));
+    }
+  }
   for (const file of sourceFiles) {
     const source = await fs.readFile(file, "utf8");
     assert.doesNotMatch(source, /\b(?:fetch|https?\.request|net\.connect|dns\.resolve|os\.homedir|sudo)\b/, file);

@@ -32,6 +32,13 @@ never be echoed, logged, placed in arguments/environment variables, or returned 
 errors. Configuration should default to `PEON_ARMORY_HOME`; host writes require a
 manifest declaration and explicit operator confirmation.
 
+Configuration fields require explicit `id`, `label`, `type`, and `required` values.
+Use `secret` for credentials requiring masked input and redaction, `file` for
+credential or configuration file input, and `select` only with a non-empty
+`options` array. Other field types must not have `options`. Optional validation may
+specify `pattern` and `maxLength`. Legacy boolean sensitivity flags are invalid
+under strict V1 manifest validation; credential handling follows the field type.
+
 ## Local development
 
 Use locked dependencies and provide package-level `build` and `test` scripts. Then

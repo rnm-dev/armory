@@ -21,7 +21,7 @@ async function runHook(name, input) {
   return { code, stdout, stderr };
 }
 
-test("configuration, verification, dependency, and MCP stay offline and redact secrets", async () => {
+test("configuration, verification, and MCP stay offline and redact secrets", async () => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-configured-fixture-"));
   const secret = "fixture-secret-that-must-not-be-printed";
   const packageInfo = { id: "fixture-configured", version: "1.0.0", dir: packageDir, home };
@@ -56,10 +56,6 @@ test("configuration, verification, dependency, and MCP stay offline and redact s
     assert.equal(verified.code, 0, verified.stderr);
     assert.equal(verified.stdout.includes(secret), false);
     assert.equal(JSON.parse(verified.stdout).ok, true);
-
-    const cli = spawnSync(path.join(packageDir, "dist", "fake-cli.js"), ["--version"], { encoding: "utf8" });
-    assert.equal(cli.status, 0, cli.stderr);
-    assert.equal(cli.stdout.trim(), "fixture-cli 1.0.0");
 
     const inherited = Object.fromEntries(Object.entries(process.env).filter((entry) => typeof entry[1] === "string"));
     const transport = new StdioClientTransport({

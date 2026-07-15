@@ -6,7 +6,6 @@
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/fixture-echo",
   "requirements": {
     "credentials": false,
-    "localDependencies": false,
     "hostWrites": false
   },
   "testOnly": true

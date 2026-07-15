@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadValidators } from "../scripts/schema-utils.mjs";
+import { loadValidators, summarizeRequirements } from "../scripts/schema-utils.mjs";
 
 const validators = await loadValidators();
 
@@ -36,7 +36,95 @@ test("minimal package manifest is valid", () => {
   }), true);
 });
 
-test("managed dependency platform contract is valid", () => {
+test("configuration fields use type-driven credential handling", () => {
+  const manifest = {
+    schemaVersion: 1,
+    id: "fixture-configured",
+    version: "1.0.0",
+    minPeonVersion: "0.0.1",
+    platforms: [{ os: "linux", arch: "x64" }],
+    permissions: { networkHosts: [], hostPaths: [] },
+    dependencies: [],
+    configuration: {
+      fields: [{
+        id: "apiKey",
+        label: "API key",
+        help: "Paste an API key.",
+        type: "secret",
+        required: true,
+        validation: { maxLength: 4096 },
+      }],
+      handler: { executable: "node", args: ["dist/hooks/configure.js"] },
+      managedPaths: [],
+    },
+    mcp: { command: { executable: "node", args: ["dist/mcp.js"] }, toolPrefix: "fixture_configured" },
+  };
+
+  assert.equal(validators.manifest(manifest), true);
+  assert.deepEqual(summarizeRequirements(manifest), { credentials: true, hostWrites: false });
+  const removedField = ["sensi", "tive"].join("");
+  assert.equal(validators.manifest({
+    ...manifest,
+    configuration: {
+      ...manifest.configuration,
+      fields: [{ ...manifest.configuration.fields[0], [removedField]: true }],
+    },
+  }), false, "removed field must be rejected");
+  assert.equal(validators.manifest({
+    ...manifest,
+    configuration: {
+      ...manifest.configuration,
+      fields: [{ id: "apiKey", label: "API key", type: "secret" }],
+    },
+  }), false, "required must remain explicit");
+});
+
+test("select options are non-empty and exclusive to select fields", () => {
+  const configured = (field) => ({
+    schemaVersion: 1,
+    id: "fixture-field",
+    version: "1.0.0",
+    minPeonVersion: "0.0.1",
+    platforms: [{ os: "linux", arch: "x64" }],
+    permissions: { networkHosts: [], hostPaths: [] },
+    dependencies: [],
+    configuration: {
+      fields: [field],
+      handler: { executable: "node", args: ["dist/hooks/configure.js"] },
+      managedPaths: [],
+    },
+    mcp: { command: { executable: "node", args: ["dist/mcp.js"] }, toolPrefix: "fixture_field" },
+  });
+
+  assert.equal(validators.manifest(configured({
+    id: "region",
+    label: "Region",
+    type: "select",
+    required: false,
+    options: [{ value: "east", label: "East" }],
+  })), true);
+  assert.equal(validators.manifest(configured({ id: "region", label: "Region", type: "select", required: false, options: [] })), false);
+  assert.equal(validators.manifest(configured({
+    id: "token",
+    label: "Token",
+    type: "secret",
+    required: false,
+    options: [{ value: "x", label: "X" }],
+  })), false);
+});
+
+test("catalog requirements include secret, file, or required configuration fields", () => {
+  const manifest = (field) => ({
+    permissions: { hostPaths: [] },
+    configuration: { fields: [field] },
+  });
+  assert.equal(summarizeRequirements(manifest({ type: "secret", required: false })).credentials, true);
+  assert.equal(summarizeRequirements(manifest({ type: "file", required: false })).credentials, true);
+  assert.equal(summarizeRequirements(manifest({ type: "text", required: true })).credentials, true);
+  assert.equal(summarizeRequirements(manifest({ type: "text", required: false })).credentials, false);
+});
+
+test("non-empty dependency declarations are rejected in V1", () => {
   assert.equal(validators.manifest({
     schemaVersion: 1,
     id: "fixture-managed",
@@ -65,7 +153,7 @@ test("managed dependency platform contract is valid", () => {
       }],
     }],
     mcp: { command: { executable: "node", args: ["dist/mcp.js"] }, toolPrefix: "fixture_managed" },
-  }), true);
+  }), false);
 });
 
 test("configure input requires configuration values", () => {

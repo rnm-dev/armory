@@ -32,6 +32,15 @@ export function formatAjvErrors(errors) {
     .join("; ");
 }
 
+export function summarizeRequirements(manifest) {
+  return {
+    credentials: Boolean(manifest.configuration?.fields.some((field) =>
+      field.required || field.type === "secret" || field.type === "file"
+    )),
+    hostWrites: manifest.permissions.hostPaths.some((entry) => entry.mode === "write"),
+  };
+}
+
 export async function loadValidators() {
   const ajv = createAjv();
   const [catalogSchema, packageSchema, hookSchema] = await Promise.all([

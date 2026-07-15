@@ -18,4 +18,4 @@ for (const name of packages) {
   }
 }
 
-console.log(`Checked ${packages.length} fixture package(s).`);
+console.log(`Checked ${packages.length} package(s).`);

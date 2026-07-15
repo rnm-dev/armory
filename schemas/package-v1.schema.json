@@ -12,7 +12,7 @@
     "minPeonVersion": { "$ref": "#/$defs/semver" },
     "platforms": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/platform" } },
     "permissions": { "$ref": "#/$defs/permissions" },
-    "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+    "dependencies": { "type": "array", "maxItems": 0 },
     "configuration": { "$ref": "#/$defs/configuration" },
     "lifecycle": { "$ref": "#/$defs/lifecycle" },
     "mcp": { "$ref": "#/$defs/mcp" }
@@ -52,7 +52,7 @@
       "properties": {
         "executable": {
           "type": "string",
-          "pattern": "^(?:node|dependency:[a-z0-9][a-z0-9-]{0,62}|(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+)$"
+          "pattern": "^(?:node|(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+)$"
         },
         "args": { "type": "array", "maxItems": 128, "items": { "type": "string", "maxLength": 4096 } }
       }
@@ -84,14 +84,13 @@
     "field": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "label", "type", "required", "sensitive"],
+      "required": ["id", "label", "type", "required"],
       "properties": {
         "id": { "$ref": "#/$defs/fieldId" },
         "label": { "type": "string", "minLength": 1, "maxLength": 120 },
         "help": { "type": "string", "maxLength": 1000 },
         "type": { "enum": ["text", "secret", "select", "file"] },
         "required": { "type": "boolean" },
-        "sensitive": { "type": "boolean" },
         "options": {
           "type": "array",
           "minItems": 1,
@@ -115,8 +114,7 @@
         }
       },
       "allOf": [
-        { "if": { "properties": { "type": { "const": "select" } } }, "then": { "required": ["options"] }, "else": { "not": { "required": ["options"] } } },
-        { "if": { "properties": { "type": { "const": "secret" } } }, "then": { "properties": { "sensitive": { "const": true } } } }
+        { "if": { "properties": { "type": { "const": "select" } } }, "then": { "required": ["options"] }, "else": { "not": { "required": ["options"] } } }
       ]
     },
     "configuration": {

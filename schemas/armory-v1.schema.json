@@ -64,10 +64,9 @@
         "requirements": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["credentials", "localDependencies", "hostWrites"],
+          "required": ["credentials", "hostWrites"],
           "properties": {
             "credentials": { "type": "boolean" },
-            "localDependencies": { "type": "boolean" },
             "hostWrites": { "type": "boolean" }
           }
         },
