@@ -1,0 +1,6 @@
+This package bundles @modelcontextprotocol/sdk and zod. See their published
+package licenses for the applicable notices.
+
+This package bundles playwright-core, Copyright (c) Microsoft Corporation,
+licensed under the Apache License 2.0. See:
+https://github.com/microsoft/playwright/blob/main/LICENSE
