@@ -36,6 +36,7 @@ async function startGeminiApi() {
       method: req.method,
       url: req.url,
       apiKey: req.headers["x-goog-api-key"],
+      revision: req.headers["api-revision"],
       body,
     });
     res.setHeader("content-type", "application/json");
@@ -43,14 +44,20 @@ async function startGeminiApi() {
       res.writeHead(401).end(JSON.stringify({ error: { message: "unauthorized" } }));
       return;
     }
-    if (req.method === "GET" && req.url === "/models/imagen-4.0-generate-001") {
-      res.end(JSON.stringify({ name: "models/imagen-4.0-generate-001" }));
+    if (req.method === "GET" && req.url === "/models/gemini-3.1-flash-image") {
+      res.end(JSON.stringify({ name: "models/gemini-3.1-flash-image" }));
       return;
     }
-    if (req.method === "POST" && req.url?.endsWith(":predict")) {
-      const sampleCount = JSON.parse(body).parameters.sampleCount;
+    if (req.method === "POST" && req.url === "/interactions") {
       res.end(JSON.stringify({
-        predictions: Array.from({ length: sampleCount }, () => ({ bytesBase64Encoded: imageData, mimeType: "image/png" })),
+        status: "completed",
+        steps: [{
+          type: "model_output",
+          content: [
+            { type: "text", text: "Generated successfully" },
+            { type: "image", mime_type: "image/png", data: imageData },
+          ],
+        }],
       }));
       return;
     }
@@ -84,7 +91,7 @@ test("manifest declares one protected Gemini credential and only the Gemini API 
 test("configures, verifies, and generates images without leaking the API key", async () => {
   const fake = await startGeminiApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-image-generator-"));
-  const packageInfo = { id: "image-generator", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "image-generator", version: "0.2.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", IMAGE_GENERATOR_TEST_API_URL: fake.url };
 
@@ -122,7 +129,7 @@ test("configures, verifies, and generates images without leaking the API key", a
       protocolVersion: 1,
       type: "result",
       ok: true,
-      message: "Gemini Imagen connection verified",
+      message: "Gemini image generation connection verified",
     });
 
     const transport = new StdioClientTransport({
@@ -130,25 +137,27 @@ test("configures, verifies, and generates images without leaking the API key", a
       args: [path.join(packageDir, "dist", "mcp.js")],
       env: { ...process.env, ...env, PEON_ARMORY_HOME: home },
     });
-    const client = new Client({ name: "image-generator-package-test", version: "0.1.0" });
+    const client = new Client({ name: "image-generator-package-test", version: "0.2.0" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();
-      assert.deepEqual(listed.tools.map((tool) => tool.name), ["gemini_imagen"]);
+      assert.deepEqual(listed.tools.map((tool) => tool.name), ["gemini_image"]);
 
-      const defaults = await client.callTool({ name: "gemini_imagen", arguments: { prompt: "A quiet mountain lake" } });
+      const defaults = await client.callTool({ name: "gemini_image", arguments: { prompt: "A quiet mountain lake" } });
       assert.equal(defaults.isError, undefined);
       assert.equal(defaults.content[0].type, "image");
       assert.equal(defaults.content[0].data, imageData);
 
       const customized = await client.callTool({
-        name: "gemini_imagen",
+        name: "gemini_image",
         arguments: {
           prompt: "A product photograph",
-          model: "imagen-4.0-ultra-generate-001",
+          negativePrompt: "words and watermarks",
+          model: "gemini-3.1-flash-image",
           aspectRatio: "16:9",
           imageSize: "2K",
-          personGeneration: "dont_allow",
+          outputMimeType: "image/jpeg",
+          grounding: "web_and_images",
           numberOfImages: 2,
         },
       });
@@ -158,22 +167,20 @@ test("configures, verifies, and generates images without leaking the API key", a
       await client.close();
     }
 
-    assert.equal(fake.requests.length, 3);
+    assert.equal(fake.requests.length, 4);
     assert(fake.requests.every((request) => request.apiKey === apiKey));
-    const generations = fake.requests.filter((request) => request.url?.endsWith(":predict")).map((request) => ({ url: request.url, body: JSON.parse(request.body) }));
+    assert(fake.requests.every((request) => request.revision === "2026-05-20"));
+    const generations = fake.requests.filter((request) => request.url === "/interactions").map((request) => JSON.parse(request.body));
     assert.deepEqual(generations[0], {
-      url: "/models/imagen-4.0-generate-001:predict",
-      body: {
-        instances: [{ prompt: "A quiet mountain lake" }],
-        parameters: { sampleCount: 1, aspectRatio: "1:1", personGeneration: "allow_adult", imageSize: "1K" },
-      },
+      model: "gemini-3.1-flash-image",
+      input: "A quiet mountain lake",
+      response_format: { type: "image", mime_type: "image/png", aspect_ratio: "1:1", image_size: "1K" },
     });
     assert.deepEqual(generations[1], {
-      url: "/models/imagen-4.0-ultra-generate-001:predict",
-      body: {
-        instances: [{ prompt: "A product photograph" }],
-        parameters: { sampleCount: 2, aspectRatio: "16:9", personGeneration: "dont_allow", imageSize: "2K" },
-      },
+      model: "gemini-3.1-flash-image",
+      input: "A product photograph\n\nAvoid the following in the generated image: words and watermarks",
+      tools: [{ type: "google_search", search_types: ["web_search", "image_search"] }],
+      response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: "16:9", image_size: "2K" },
     });
     assert.equal(JSON.stringify(generations).includes(apiKey), false);
   } finally {
@@ -189,12 +196,12 @@ test("rejects incompatible model settings before making a billable request", asy
   await fs.writeFile(path.join(home, "config", "image-generator.json"), JSON.stringify({ apiKey }), { mode: 0o600 });
   const env = { ...process.env, NODE_ENV: "test", IMAGE_GENERATOR_TEST_API_URL: fake.url, PEON_ARMORY_HOME: home };
   const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(packageDir, "dist", "mcp.js")], env });
-  const client = new Client({ name: "image-generator-validation-test", version: "0.1.0" });
+  const client = new Client({ name: "image-generator-validation-test", version: "0.2.0" });
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "gemini_imagen",
-      arguments: { prompt: "test", model: "imagen-4.0-fast-generate-001", imageSize: "2K" },
+      name: "gemini_image",
+      arguments: { prompt: "test", model: "gemini-3.1-flash-lite-image", imageSize: "4K" },
     });
     assert.equal(result.isError, true);
     assert.equal(fake.requests.length, 0);

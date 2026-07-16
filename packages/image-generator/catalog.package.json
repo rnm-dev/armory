@@ -1,7 +1,7 @@
 {
   "id": "image-generator",
   "displayName": "Image Generator",
-  "summary": "Generate images with Imagen 4 models through the Gemini API.",
+  "summary": "Generate images with selectable Gemini-native image models and production-ready controls.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/image-generator",
   "requirements": {
