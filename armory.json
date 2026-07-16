@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-15T16:09:45.671Z",
+  "updatedAt": "2026-07-16T06:51:28.271Z",
   "packages": [
     {
       "id": "heroboard",
@@ -218,7 +218,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.0",
+      "latest": "0.2.0",
       "versions": [
         {
           "version": "0.1.0",
@@ -245,6 +245,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/image-generator-v0.1.0/image-generator-0.1.0.tar.gz",
             "size": 191096,
             "sha256": "6ad6cd1e56fd1d7c42f66fef0b3e19299d564ab9df0419e152ea0cfac0478cc7"
+          }
+        },
+        {
+          "version": "0.2.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/image-generator-v0.2.0/image-generator-0.2.0.tar.gz",
+            "size": 191517,
+            "sha256": "02c45c7fe36d66a8e8bff4b3f6f95e26bde42a8ed1873d4ef2ea7ab638252880"
           }
         }
       ]
