@@ -5,6 +5,7 @@ import semver from "semver";
 import { formatAjvErrors, loadValidators, readJson, repoRoot, summarizeRequirements } from "./schema-utils.mjs";
 
 const OFFICIAL_RELEASE_PREFIX = "/rnm-dev/armory/releases/download/";
+const iconUrl = (id) => `https://raw.githubusercontent.com/rnm-dev/armory/main/packages/${id}/assets/icon.png`;
 const errors = [];
 const fail = (where, message) => errors.push(`${where}: ${message}`);
 const key = (platform) => `${platform.os}/${platform.arch}`;
@@ -26,6 +27,28 @@ function validateHttpsUrl(value, where, hosts, pathPrefix) {
     if (pathPrefix && !url.pathname.startsWith(pathPrefix)) fail(where, `path must begin with ${pathPrefix}`);
   } catch {
     fail(where, "invalid URL");
+  }
+}
+
+function validateIconUrl(value, id, where) {
+  if (value !== iconUrl(id)) fail(where, `must equal ${iconUrl(id)}`);
+}
+
+async function validateIconAsset(packageDir, where) {
+  const target = path.join(packageDir, "assets", "icon.png");
+  try {
+    const bytes = await fs.readFile(target);
+    if (bytes.byteLength > 2 * 1024 * 1024) fail(where, "icon.png must not exceed 2 MiB");
+    if (bytes.byteLength < 24 || bytes.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") {
+      fail(where, "icon.png must be a valid PNG");
+      return;
+    }
+    const width = bytes.readUInt32BE(16);
+    const height = bytes.readUInt32BE(20);
+    if (width !== height) fail(where, `icon.png must be square, got ${width}x${height}`);
+    if (width < 128 || width > 2048) fail(where, `icon.png dimensions must be between 128x128 and 2048x2048, got ${width}x${height}`);
+  } catch (error) {
+    fail(where, `cannot read assets/icon.png: ${error.message}`);
   }
 }
 
@@ -70,6 +93,7 @@ if (catalog && validators.catalog(catalog)) {
     if (!entry.versions.some((version) => version.version === entry.latest)) fail(`armory.json.${entry.id}`, "latest is not a listed version");
     if (semver.prerelease(entry.latest)) fail(`armory.json.${entry.id}`, "latest cannot be a prerelease");
     validateHttpsUrl(entry.documentationUrl, `armory.json.${entry.id}.documentationUrl`, ["github.com"], `/rnm-dev/armory/`);
+    if (entry.iconUrl) validateIconUrl(entry.iconUrl, entry.id, `armory.json.${entry.id}.iconUrl`);
     for (const version of entry.versions) {
       unique(version.platforms.map(key), `armory.json.${entry.id}.${version.version}.platforms`);
       validateHttpsUrl(version.archive.url, `armory.json.${entry.id}.${version.version}.archive`, ["github.com"], OFFICIAL_RELEASE_PREFIX);
@@ -100,13 +124,17 @@ for (const dirent of packageDirs) {
   try {
     const metadata = await readJson(metadataPath);
     const keys = Object.keys(metadata).sort();
-    const allowed = ["displayName", "documentationUrl", "id", "publisher", "requirements", "summary", "testOnly"];
+    const allowed = ["displayName", "documentationUrl", "iconUrl", "id", "publisher", "requirements", "summary", "testOnly"];
     if (keys.some((name) => !allowed.includes(name))) fail(`packages/${dirent.name}/catalog.package.json`, "contains unknown fields");
     for (const required of ["id", "displayName", "summary", "publisher", "documentationUrl", "requirements"]) {
       if (!(required in metadata)) fail(`packages/${dirent.name}/catalog.package.json`, `missing ${required}`);
     }
     if (metadata.id !== manifest.id || metadata.publisher !== "rnm-dev") fail(`packages/${dirent.name}/catalog.package.json`, "identity does not match manifest/publisher");
     validateHttpsUrl(metadata.documentationUrl, `packages/${dirent.name}/catalog.package.json.documentationUrl`, ["github.com"], `/rnm-dev/armory/`);
+    if (metadata.iconUrl) {
+      validateIconUrl(metadata.iconUrl, manifest.id, `packages/${dirent.name}/catalog.package.json.iconUrl`);
+      await validateIconAsset(path.join(packageRoot, dirent.name), `packages/${dirent.name}/assets/icon.png`);
+    }
     const expectedRequirements = summarizeRequirements(manifest);
     if (JSON.stringify(metadata.requirements) !== JSON.stringify(expectedRequirements)) fail(`packages/${dirent.name}/catalog.package.json`, "requirements do not summarize manifest");
     if (metadata.testOnly === true && catalogById.has(manifest.id)) fail(`packages/${dirent.name}`, "test-only package cannot appear in production armory.json");

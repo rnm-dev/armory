@@ -1,6 +1,7 @@
 {
   "id": "heroboard",
   "displayName": "Heroboard",
+  "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/heroboard/assets/icon.png",
   "summary": "Track projects, tasks, progress, and XP from your coding agent.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/heroboard",

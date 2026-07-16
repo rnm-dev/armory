@@ -1,6 +1,7 @@
 {
   "id": "image-generator",
   "displayName": "Image Generator",
+  "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/image-generator/assets/icon.png",
   "summary": "Generate images with selectable Gemini-native image models and production-ready controls.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/image-generator",

@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-16T08:45:29.225Z",
+  "updatedAt": "2026-07-16T09:16:15.000Z",
   "packages": [
     {
       "id": "heroboard",
       "displayName": "Heroboard",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/heroboard/assets/icon.png",
       "summary": "Track projects, tasks, progress, and XP from your coding agent.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/heroboard",
@@ -47,6 +48,7 @@
     {
       "id": "cloudflare",
       "displayName": "Cloudflare",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/cloudflare/assets/icon.png",
       "summary": "Manage Cloudflare DNS zones, records, and remotely configured tunnels.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/cloudflare",
@@ -88,6 +90,7 @@
     {
       "id": "google-ads",
       "displayName": "Google Ads",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-ads/assets/icon.png",
       "summary": "Inspect Google Ads accounts and run bounded, read-only GAQL reports.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-ads",
@@ -129,6 +132,7 @@
     {
       "id": "google-analytics",
       "displayName": "Google Analytics",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-analytics/assets/icon.png",
       "summary": "Query GA4 data, administer Analytics resources, delete user data, and send Measurement Protocol events.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-analytics",
@@ -170,6 +174,7 @@
     {
       "id": "google-search-console",
       "displayName": "Google Search Console",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-search-console/assets/icon.png",
       "summary": "Inspect properties, search performance, sitemaps, and Google index status.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-search-console",
@@ -211,7 +216,8 @@
     {
       "id": "image-generator",
       "displayName": "Image Generator",
-      "summary": "Generate images with Imagen 4 models through the Gemini API.",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/image-generator/assets/icon.png",
+      "summary": "Generate images with selectable Gemini-native image models and production-ready controls.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/image-generator",
       "requirements": {
@@ -279,6 +285,7 @@
     {
       "id": "playwright",
       "displayName": "Playwright",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/playwright/assets/icon.png",
       "summary": "Test local web applications through an operator-installed headless Chrome or Chromium browser.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/playwright",
@@ -320,6 +327,7 @@
     {
       "id": "google-tag-manager",
       "displayName": "Google Tag Manager",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-tag-manager/assets/icon.png",
       "summary": "Inspect and manage GTM accounts, containers, workspaces, tags, versions, publishing, and permissions.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-tag-manager",

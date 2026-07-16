@@ -12,6 +12,7 @@ export interface ArmoryCatalogV1 {
 export interface Package {
   id: PackageId;
   displayName: string;
+  iconUrl?: string;
   summary: string;
   publisher: "rnm-dev";
   documentationUrl: string;

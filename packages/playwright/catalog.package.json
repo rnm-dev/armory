@@ -1,6 +1,7 @@
 {
   "id": "playwright",
   "displayName": "Playwright",
+  "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/playwright/assets/icon.png",
   "summary": "Test local web applications through an operator-installed headless Chrome or Chromium browser.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/playwright",

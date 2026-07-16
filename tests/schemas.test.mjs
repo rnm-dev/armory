@@ -23,6 +23,32 @@ test("catalog rejects unknown fields", () => {
   }), false);
 });
 
+test("catalog accepts only official package icon asset URLs", () => {
+  const packageEntry = {
+    id: "fixture-echo",
+    displayName: "Fixture Echo",
+    iconUrl: "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/fixture-echo/assets/icon.png",
+    summary: "Fixture package.",
+    publisher: "rnm-dev",
+    documentationUrl: "https://github.com/rnm-dev/armory/tree/main/packages/fixture-echo",
+    latest: "1.0.0",
+    requirements: { credentials: false, hostWrites: false },
+    versions: [{
+      version: "1.0.0",
+      minPeonVersion: "0.0.1",
+      platforms: [{ os: "linux", arch: "x64" }],
+      archive: {
+        url: "https://github.com/rnm-dev/armory/releases/download/fixture-echo-v1.0.0/fixture-echo-1.0.0.tar.gz",
+        size: 1,
+        sha256: "a".repeat(64),
+      },
+    }],
+  };
+  const catalog = { schemaVersion: 1, name: "rnm-dev/armory", updatedAt: "2026-07-16T00:00:00.000Z", packages: [packageEntry] };
+  assert.equal(validators.catalog(catalog), true);
+  assert.equal(validators.catalog({ ...catalog, packages: [{ ...packageEntry, iconUrl: "https://example.com/icon.png" }] }), false);
+});
+
 test("minimal package manifest is valid", () => {
   assert.equal(validators.manifest({
     schemaVersion: 1,

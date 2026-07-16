@@ -35,7 +35,7 @@ if (tagExists || releaseExists) throw new Error(`Refusing to replace existing ta
 
 const metadataPath = path.resolve(repoRoot, argv[metadataFlag + 1]);
 const metadata = await readJson(metadataPath);
-const requiredKeys = ["id", "displayName", "summary", "publisher", "documentationUrl", "requirements"];
+const requiredKeys = ["id", "displayName", "iconUrl", "summary", "publisher", "documentationUrl", "requirements"];
 if (requiredKeys.some((key) => !(key in metadata)) || metadata.id !== id || metadata.publisher !== "rnm-dev") {
   throw new Error("Catalog metadata is incomplete or does not match the package");
 }
@@ -65,10 +65,12 @@ try {
   await fs.rm(downloadDir, { recursive: true, force: true });
 }
 
+const { testOnly: _testOnly, ...catalogMetadata } = metadata;
 if (!entry) {
-  const { testOnly: _testOnly, ...catalogMetadata } = metadata;
   entry = { ...catalogMetadata, requirements, latest: build.version, versions: [] };
   catalog.packages.push(entry);
+} else {
+  Object.assign(entry, catalogMetadata);
 }
 entry.requirements = requirements;
 entry.versions.push({
