@@ -1,0 +1,3 @@
+This package bundles @modelcontextprotocol/sdk, google-auth-library, zod, and
+their transitive runtime dependencies. See their published package licenses
+for the applicable notices.

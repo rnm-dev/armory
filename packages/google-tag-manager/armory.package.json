@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "google-tag-manager",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["oauth2.googleapis.com", "tagmanager.googleapis.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "credentialJson",
+        "label": "Google credential JSON",
+        "help": "Paste a Google authorized_user credential JSON containing a refresh token, or a service-account key JSON. Enable the Tag Manager API in the credential's Google Cloud project. Grant the Google identity access under Tag Manager > Admin > User Management for the relevant account and containers.",
+        "type": "secret",
+        "required": true,
+        "validation": { "maxLength": 1048576 }
+      },
+      {
+        "id": "defaultAccountId",
+        "label": "Default GTM account ID",
+        "help": "Optional numeric account ID, visible in Tag Manager account settings and API resource paths. Used when a tool call omits accountId.",
+        "type": "text",
+        "required": false,
+        "validation": { "pattern": "^[0-9]{1,32}$", "maxLength": 32 }
+      },
+      {
+        "id": "defaultContainerId",
+        "label": "Default GTM container ID",
+        "help": "Optional numeric container ID from the Tag Manager API, not the public GTM-XXXX ID. Used when a tool call omits containerId.",
+        "type": "text",
+        "required": false,
+        "validation": { "pattern": "^[0-9]{1,32}$", "maxLength": 32 }
+      },
+      {
+        "id": "defaultWorkspaceId",
+        "label": "Default GTM workspace ID",
+        "help": "Optional numeric workspace ID from the Tag Manager API. Used when a tool call omits workspaceId.",
+        "type": "text",
+        "required": false,
+        "validation": { "pattern": "^[0-9]{1,32}$", "maxLength": 32 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/google-tag-manager.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "google_tag_manager",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}

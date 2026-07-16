@@ -1,0 +1,11 @@
+{
+  "id": "google-tag-manager",
+  "displayName": "Google Tag Manager",
+  "summary": "Inspect and manage GTM accounts, containers, workspaces, tags, versions, publishing, and permissions.",
+  "publisher": "rnm-dev",
+  "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-tag-manager",
+  "requirements": {
+    "credentials": true,
+    "hostWrites": false
+  }
+}
