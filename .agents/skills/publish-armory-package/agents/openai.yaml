@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish Armory Package"
+  short_description: "Safely release new and updated Armory packages"
+  default_prompt: "Use $publish-armory-package to prepare or publish an Armory package release."
