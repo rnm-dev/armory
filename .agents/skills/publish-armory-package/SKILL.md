@@ -111,6 +111,14 @@ If the package source was already committed and pushed, verify that the current 
 
 ## Create the immutable release
 
+For an explicitly authorized end-to-end release, use the guarded task. It runs the full release gates, calls the publisher, creates and pushes the catalog-only commit, and verifies the public exact-commit catalog. `--confirm` is required because the GitHub Release is immutable:
+
+```sh
+npm run release:package -- <id> --confirm
+```
+
+Use the manual steps below when the release needs inspection or intervention between phases.
+
 Run the publisher exactly once:
 
 ```sh

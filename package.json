@@ -15,7 +15,8 @@
     "test:packages": "node scripts/check-packages.mjs",
     "check": "npm run validate && npm run typecheck && npm test && npm run test:packages",
     "build:package": "node scripts/build-package.mjs",
-    "publish:package": "node scripts/publish-package.mjs"
+    "publish:package": "node scripts/publish-package.mjs",
+    "release:package": "node scripts/release-package.mjs"
   },
   "dependencies": {
     "ajv": "8.20.0",
