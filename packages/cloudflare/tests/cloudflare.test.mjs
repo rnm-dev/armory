@@ -11,6 +11,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const apiToken = "cloudflare_test_token_that_must_not_leak";
+const accountApiToken = "cfat_cloudflare_account_test_token_that_must_not_leak";
 const accountId = "0123456789abcdef0123456789abcdef";
 const zoneId = "fedcba9876543210fedcba9876543210";
 const tunnelId = "11111111-2222-4333-8444-555555555555";
@@ -36,11 +37,16 @@ async function startCloudflare() {
     for await (const chunk of req) body += chunk;
     requests.push({ method: req.method, url: req.url, authorization: req.headers.authorization, body });
     res.setHeader("content-type", "application/json");
-    if (req.headers.authorization !== `Bearer ${apiToken}`) {
+    const token = req.headers.authorization?.replace(/^Bearer /, "");
+    if (token !== apiToken && token !== accountApiToken) {
       res.writeHead(401).end(JSON.stringify({ success: false, errors: [{ message: "unauthorized" }] }));
       return;
     }
     if (req.url === "/user/tokens/verify") {
+      res.end(JSON.stringify({ success: true, result: { status: "active" } }));
+      return;
+    }
+    if (req.url === `/accounts/${accountId}/tokens/verify`) {
       res.end(JSON.stringify({ success: true, result: { status: "active" } }));
       return;
     }
@@ -97,16 +103,52 @@ test("manifest declares scoped credential configuration and no host writes", asy
     { id: "accountId", type: "text", required: true },
   ]);
   assert.match(manifest.configuration.fields[0].help, /My Profile > API Tokens/);
+  assert.match(manifest.configuration.fields[0].help, /Manage Account > Account API Tokens/);
   assert.match(manifest.configuration.fields[0].help, /Zone DNS Edit/);
   assert.match(manifest.configuration.fields[0].help, /Cloudflare Tunnel Write/);
   assert.match(manifest.configuration.fields[1].help, /Account home/);
   assert.match(manifest.configuration.fields[1].help, /Copy account ID/);
 });
 
+test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
+  const fake = await startCloudflare();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
+  const packageInfo = { id: "cloudflare", version: "0.1.1", dir: packageDir, home };
+  const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
+  const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
+
+  try {
+    const configured = await runHook("configure", {
+      protocolVersion: 1,
+      type: "input",
+      operation: "configure",
+      package: packageInfo,
+      platform,
+      configuration: { apiToken: accountApiToken, accountId },
+    }, env);
+    assert.equal(configured.code, 0, configured.stderr);
+
+    const verified = await runHook("verify", {
+      protocolVersion: 1,
+      type: "input",
+      operation: "verify",
+      package: packageInfo,
+      platform,
+    }, env);
+    assert.equal(verified.code, 0, verified.stderr);
+    assert.equal(verified.stdout.includes(accountApiToken), false);
+    assert(fake.requests.some((request) => request.url === `/accounts/${accountId}/tokens/verify`));
+    assert.equal(fake.requests.some((request) => request.url === "/user/tokens/verify"), false);
+  } finally {
+    await fake.close();
+    await fs.rm(home, { recursive: true, force: true });
+  }
+});
+
 test("configures, verifies, and manages zones, records, and tunnels without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 

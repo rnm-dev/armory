@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cloudflare",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -19,7 +19,7 @@
       {
         "id": "apiToken",
         "label": "API token",
-        "help": "In the Cloudflare dashboard, open My Profile > API Tokens, select Create Token, and create a custom token for the required accounts and zones. Grant Zone Zone Edit, Zone DNS Edit, and Cloudflare Tunnel Write permissions. Create the token, copy the secret shown once, and paste it here.",
+        "help": "In the Cloudflare dashboard, create either a user token under My Profile > API Tokens or an account-owned token under Manage Account > Account API Tokens. Grant Zone Zone Edit, Zone DNS Edit, and Cloudflare Tunnel Write permissions for the required account and zones. Create the token, copy the secret shown once, and paste it here.",
         "type": "secret",
         "required": true,
         "validation": { "maxLength": 4096 }
