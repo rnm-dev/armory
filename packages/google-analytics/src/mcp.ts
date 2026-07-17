@@ -8,7 +8,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new GoogleAnalyticsClient(config);
-const server = new McpServer({ name: "armory-google-analytics", version: "0.1.0" });
+const server = new McpServer({ name: "armory-google-analytics", version: "0.1.1" });
 
 const propertyId = z.string().regex(/^[0-9]{1,32}$/).optional()
   .describe("Numeric GA4 property ID; uses the configured default when omitted");

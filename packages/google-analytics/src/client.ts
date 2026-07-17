@@ -15,6 +15,38 @@ const DEFAULT_BASES = {
   legacy: "https://www.googleapis.com/analytics/v3",
 } as const;
 
+export class GoogleAnalyticsApiError extends Error {
+  constructor(
+    readonly httpStatus: number,
+    readonly providerStatus: string | undefined,
+    readonly providerReasons: string[],
+    detail: string,
+  ) {
+    super(`Google Analytics API request failed (HTTP ${httpStatus}): ${detail}`);
+    this.name = "GoogleAnalyticsApiError";
+  }
+}
+
+function providerError(value: unknown): { status?: string; reasons: string[] } {
+  if (!value || typeof value !== "object" || !("error" in value)) return { reasons: [] };
+  const error = (value as { error?: unknown }).error;
+  if (!error || typeof error !== "object") return { reasons: [] };
+  const record = error as Record<string, unknown>;
+  const reasons = new Set<string>();
+  for (const candidate of [record.errors, record.details]) {
+    if (!Array.isArray(candidate)) continue;
+    for (const item of candidate) {
+      if (!item || typeof item !== "object") continue;
+      const reason = (item as Record<string, unknown>).reason;
+      if (typeof reason === "string") reasons.add(reason);
+    }
+  }
+  return {
+    status: typeof record.status === "string" ? record.status : undefined,
+    reasons: [...reasons],
+  };
+}
+
 function serviceBase(service: keyof typeof DEFAULT_BASES): string {
   const testBase = process.env.NODE_ENV === "test" ? process.env.GOOGLE_ANALYTICS_TEST_API_URL : undefined;
   return (testBase || DEFAULT_BASES[service]).replace(/\/$/, "");
@@ -69,10 +101,11 @@ export class GoogleAnalyticsClient {
     let value: unknown;
     try { value = text ? JSON.parse(text) : {}; } catch { value = { message: text.slice(0, 1000) }; }
     if (!response.ok) {
+      const provider = providerError(value);
       const detail = typeof value === "object" && value && "error" in value
         ? JSON.stringify((value as { error: unknown }).error).slice(0, 2000)
         : `HTTP ${response.status}`;
-      throw new Error(`Google Analytics API request failed (HTTP ${response.status}): ${detail}`);
+      throw new GoogleAnalyticsApiError(response.status, provider.status, provider.reasons, detail);
     }
     return value;
   }

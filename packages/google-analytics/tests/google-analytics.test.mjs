@@ -32,6 +32,7 @@ async function runHook(name, input, env) {
 
 async function startGoogleApis() {
   const requests = [];
+  let verificationFailure;
   const server = http.createServer(async (req, res) => {
     let body = "";
     for await (const chunk of req) body += chunk;
@@ -48,6 +49,13 @@ async function startGoogleApis() {
     }
     if (req.headers.authorization !== `Bearer ${accessToken}`) {
       res.writeHead(401).end(JSON.stringify({ error: { message: "unauthorized" } }));
+      return;
+    }
+    const verificationStep = req.url === "/v1beta/accountSummaries?pageSize=1" ? "accounts"
+      : req.url === `/v1beta/properties/${propertyId}/metadata` ? "property"
+      : undefined;
+    if (verificationStep && verificationFailure?.step === verificationStep) {
+      res.writeHead(verificationFailure.status).end(JSON.stringify({ error: verificationFailure.body }));
       return;
     }
     if (req.url === "/v1beta/accountSummaries?pageSize=1") {
@@ -79,6 +87,7 @@ async function startGoogleApis() {
   return {
     requests,
     url: `http://127.0.0.1:${address.port}`,
+    setVerificationFailure: (failure) => { verificationFailure = failure; },
     close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())),
   };
 }
@@ -102,10 +111,104 @@ test("manifest declares Google endpoints, secret credentials, and no host writes
   assert.match(fields.measurementApiSecret.help, /Measurement Protocol API secrets/);
 });
 
+test("verification reports actionable failures without exposing Google response details", async () => {
+  const fake = await startGoogleApis();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-analytics-errors-"));
+  const packageInfo = { id: "google-analytics", version: "0.1.1", dir: packageDir, home };
+  const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
+  const env = {
+    NODE_ENV: "test",
+    GOOGLE_ANALYTICS_TEST_API_URL: fake.url,
+    GOOGLE_ANALYTICS_TEST_ACCESS_TOKEN: accessToken,
+  };
+  const sensitiveProviderDetail = "provider_detail_that_must_not_leak";
+
+  try {
+    const configured = await runHook("configure", {
+      protocolVersion: 1,
+      type: "input",
+      operation: "configure",
+      package: packageInfo,
+      platform,
+      configuration: {
+        credentialJson: JSON.stringify({
+          type: "authorized_user",
+          client_id: "client-id.apps.googleusercontent.com",
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+        }),
+        defaultPropertyId: propertyId,
+        measurementRegion: "global",
+      },
+    }, env);
+    assert.equal(configured.code, 0, configured.stderr);
+
+    const cases = [
+      {
+        failure: { step: "accounts", status: 401, body: { status: "UNAUTHENTICATED", message: sensitiveProviderDetail } },
+        errorCode: "GOOGLE_CREDENTIAL_REJECTED",
+        message: /rejected the credential/,
+      },
+      {
+        failure: { step: "accounts", status: 403, body: { status: "PERMISSION_DENIED", message: sensitiveProviderDetail, details: [{ reason: "SERVICE_DISABLED" }] } },
+        errorCode: "GOOGLE_API_DISABLED",
+        message: /analyticsadmin\.googleapis\.com/,
+      },
+      {
+        failure: { step: "accounts", status: 403, body: { status: "PERMISSION_DENIED", message: sensitiveProviderDetail } },
+        errorCode: "ANALYTICS_ACCESS_DENIED",
+        message: /Account or Property access management/,
+      },
+      {
+        failure: { step: "property", status: 403, body: { status: "PERMISSION_DENIED", message: sensitiveProviderDetail } },
+        errorCode: "PROPERTY_ACCESS_DENIED",
+        message: /Property access management/,
+      },
+      {
+        failure: { step: "property", status: 404, body: { status: "NOT_FOUND", message: sensitiveProviderDetail } },
+        errorCode: "PROPERTY_NOT_FOUND",
+        message: /Property ID/,
+      },
+      {
+        failure: { step: "accounts", status: 429, body: { status: "RESOURCE_EXHAUSTED", message: sensitiveProviderDetail } },
+        errorCode: "GOOGLE_API_RATE_LIMITED",
+        message: /rate-limited/,
+      },
+      {
+        failure: { step: "accounts", status: 503, body: { status: "UNAVAILABLE", message: sensitiveProviderDetail } },
+        errorCode: "GOOGLE_API_UNAVAILABLE",
+        message: /temporarily unavailable/,
+      },
+    ];
+
+    for (const scenario of cases) {
+      fake.setVerificationFailure(scenario.failure);
+      const verified = await runHook("verify", {
+        protocolVersion: 1,
+        type: "input",
+        operation: "verify",
+        package: packageInfo,
+        platform,
+      }, env);
+      assert.equal(verified.code, 1);
+      assert.equal(verified.stderr, "");
+      assert.equal(verified.stdout.includes(sensitiveProviderDetail), false);
+      assert.equal(verified.stdout.includes(clientSecret), false);
+      assert.equal(verified.stdout.includes(refreshToken), false);
+      const response = JSON.parse(verified.stdout);
+      assert.equal(response.errorCode, scenario.errorCode);
+      assert.match(response.message, scenario.message);
+    }
+  } finally {
+    await fs.rm(home, { recursive: true, force: true });
+    await fake.close();
+  }
+});
+
 test("configures, verifies, reports, administers, deletes, and measures without leaking secrets", async () => {
   const fake = await startGoogleApis();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-analytics-"));
-  const packageInfo = { id: "google-analytics", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "google-analytics", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",

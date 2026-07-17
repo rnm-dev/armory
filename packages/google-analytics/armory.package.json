@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-analytics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
