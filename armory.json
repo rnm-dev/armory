@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-20T10:58:58.194Z",
+  "updatedAt": "2026-07-20T11:55:28.073Z",
   "packages": [
     {
       "id": "heroboard",
@@ -56,7 +56,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.5.0",
+      "latest": "0.5.1",
       "versions": [
         {
           "version": "0.1.0",
@@ -218,6 +218,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/cloudflare-v0.5.0/cloudflare-0.5.0.tar.gz",
             "size": 532072,
             "sha256": "4e1db1372114db57572a946a8cf8768b10997b726ff3d9ef84f1abbc371cf8de"
+          }
+        },
+        {
+          "version": "0.5.1",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/cloudflare-v0.5.1/cloudflare-0.5.1.tar.gz",
+            "size": 532267,
+            "sha256": "4f351ad398908fa5e2288d27d91eb4171ad0deed6c50298c928df56fe7872d6e"
           }
         }
       ]
