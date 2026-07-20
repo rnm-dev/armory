@@ -15,6 +15,7 @@ const accountApiToken = "cfat_cloudflare_account_test_token_that_must_not_leak";
 const accountId = "0123456789abcdef0123456789abcdef";
 const zoneId = "fedcba9876543210fedcba9876543210";
 const tunnelId = "11111111-2222-4333-8444-555555555555";
+const turnstileSitekey = "0x4AAAAAAAAAAAAAAAAAAAAAAA";
 
 async function runHook(name, input, env) {
   const child = spawn(process.execPath, [path.join(packageDir, "dist", "hooks", `${name}.js`)], {
@@ -58,12 +59,28 @@ async function startCloudflare() {
       res.end(JSON.stringify({ success: true, result: [] }));
       return;
     }
+    if (req.url === `/accounts/${accountId}/challenges/widgets?page=1&per_page=5`) {
+      res.end(JSON.stringify({ success: true, result: [] }));
+      return;
+    }
     if (req.method === "GET" && req.url?.startsWith("/zones?")) {
       res.end(JSON.stringify({ success: true, result: [{ id: zoneId, name: "example.com" }], result_info: { total_pages: 1 } }));
       return;
     }
     if (req.method === "GET" && req.url?.startsWith(`/accounts/${accountId}/cfd_tunnel?`)) {
       res.end(JSON.stringify({ success: true, result: [{ id: tunnelId, name: "app" }], result_info: { total_pages: 1 } }));
+      return;
+    }
+    if (req.method === "GET" && req.url?.startsWith(`/accounts/${accountId}/challenges/widgets?`)) {
+      res.end(JSON.stringify({
+        success: true,
+        result: [{ sitekey: turnstileSitekey, name: "login", domains: ["example.com"], mode: "managed" }],
+        result_info: { page: 1, per_page: 50, total_count: 1 },
+      }));
+      return;
+    }
+    if (req.method === "GET" && req.url === `/accounts/${accountId}/challenges/widgets/${turnstileSitekey}`) {
+      res.end(JSON.stringify({ success: true, result: { sitekey: turnstileSitekey, secret: "turnstile-secret", name: "login" } }));
       return;
     }
     if (req.method === "POST" && req.url === "/zones") {
@@ -76,6 +93,22 @@ async function startCloudflare() {
     }
     if (req.method === "POST" && req.url === `/accounts/${accountId}/cfd_tunnel`) {
       res.end(JSON.stringify({ success: true, result: { id: tunnelId, ...JSON.parse(body) } }));
+      return;
+    }
+    if (req.method === "POST" && req.url === `/accounts/${accountId}/challenges/widgets`) {
+      res.end(JSON.stringify({ success: true, result: { sitekey: turnstileSitekey, secret: "turnstile-secret", ...JSON.parse(body) } }));
+      return;
+    }
+    if (req.method === "PUT" && req.url === `/accounts/${accountId}/challenges/widgets/${turnstileSitekey}`) {
+      res.end(JSON.stringify({ success: true, result: { sitekey: turnstileSitekey, ...JSON.parse(body) } }));
+      return;
+    }
+    if (req.method === "POST" && req.url === `/accounts/${accountId}/challenges/widgets/${turnstileSitekey}/rotate_secret`) {
+      res.end(JSON.stringify({ success: true, result: { sitekey: turnstileSitekey, secret: "rotated-turnstile-secret" } }));
+      return;
+    }
+    if (req.method === "DELETE" && req.url === `/accounts/${accountId}/challenges/widgets/${turnstileSitekey}`) {
+      res.end(JSON.stringify({ success: true, result: { sitekey: turnstileSitekey } }));
       return;
     }
     if (req.method === "PUT" && req.url === `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`) {
@@ -106,6 +139,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
   assert.match(manifest.configuration.fields[0].help, /Manage Account > Account API Tokens/);
   assert.match(manifest.configuration.fields[0].help, /Zone DNS Edit/);
   assert.match(manifest.configuration.fields[0].help, /Cloudflare Tunnel Write/);
+  assert.match(manifest.configuration.fields[0].help, /Turnstile Sites Write/);
   assert.match(manifest.configuration.fields[1].help, /Account home/);
   assert.match(manifest.configuration.fields[1].help, /Copy account ID/);
 });
@@ -113,7 +147,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.1.1", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.2.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -145,10 +179,10 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
   }
 });
 
-test("configures, verifies, and manages zones, records, and tunnels without leaking credentials", async () => {
+test("configures, verifies, and manages zones, records, tunnels, and Turnstile without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.1.1", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.2.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -195,6 +229,8 @@ test("configures, verifies, and manages zones, records, and tunnels without leak
         "list_dns_records", "get_dns_record", "create_dns_record", "update_dns_record", "delete_dns_record",
         "list_tunnels", "get_tunnel", "create_tunnel", "update_tunnel", "delete_tunnel",
         "get_tunnel_configuration", "put_tunnel_configuration",
+        "list_turnstile_widgets", "get_turnstile_widget", "create_turnstile_widget", "update_turnstile_widget",
+        "rotate_turnstile_widget_secret", "delete_turnstile_widget",
       ]);
       await client.callTool({ name: "list_zones", arguments: {} });
       await client.callTool({ name: "create_zone", arguments: { name: "example.com", type: "full" } });
@@ -207,6 +243,19 @@ test("configures, verifies, and manages zones, records, and tunnels without leak
         tunnelId,
         ingress: [{ hostname: "app.example.com", service: "http://localhost:8080" }, { service: "http_status:404" }],
       } });
+      await client.callTool({ name: "list_turnstile_widgets", arguments: { filter: "name:login" } });
+      await client.callTool({ name: "get_turnstile_widget", arguments: { sitekey: turnstileSitekey } });
+      await client.callTool({ name: "create_turnstile_widget", arguments: {
+        name: "login", domains: ["example.com"], mode: "managed", clearanceLevel: "managed",
+      } });
+      await client.callTool({ name: "update_turnstile_widget", arguments: {
+        sitekey: turnstileSitekey, name: "login form", domains: ["example.com"], mode: "invisible",
+        ephemeralId: true,
+      } });
+      await client.callTool({ name: "rotate_turnstile_widget_secret", arguments: {
+        sitekey: turnstileSitekey, invalidateImmediately: false, confirm: true,
+      } });
+      await client.callTool({ name: "delete_turnstile_widget", arguments: { sitekey: turnstileSitekey, confirm: true } });
     } finally {
       await client.close();
     }
@@ -216,6 +265,8 @@ test("configures, verifies, and manages zones, records, and tunnels without leak
     assert.equal(JSON.stringify(fake.requests.map(({ method, url, body }) => ({ method, url, body }))).includes(apiToken), false);
     assert(fake.requests.some((request) => request.url === "/zones" && request.body.includes(accountId)));
     assert(fake.requests.some((request) => request.url?.includes("cfd_tunnel") && request.body.includes('"config_src":"cloudflare"')));
+    assert(fake.requests.some((request) => request.url?.includes("challenges/widgets") && request.body.includes('"clearance_level":"managed"')));
+    assert(fake.requests.some((request) => request.url?.endsWith("rotate_secret") && request.body === '{"invalidate_immediately":false}'));
   } finally {
     await fs.rm(home, { recursive: true, force: true });
     await fake.close();

@@ -8,12 +8,13 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.1.1" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.2.0" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");
 const recordId = id.describe("Cloudflare DNS record ID");
 const tunnelId = z.string().uuid().describe("Cloudflare Tunnel UUID");
+const turnstileSitekey = z.string().min(1).max(32).describe("Turnstile widget sitekey");
 const confirm = z.literal(true).describe("Must be true to confirm this destructive operation");
 const jsonObject = z.record(z.string(), z.unknown());
 
@@ -212,6 +213,97 @@ server.registerTool("put_tunnel_configuration", {
       ...(warpRoutingEnabled === undefined ? {} : { "warp-routing": { enabled: warpRoutingEnabled } }),
     } }),
   },
+)));
+
+const turnstileMode = z.enum(["non-interactive", "invisible", "managed"]);
+const turnstileClearanceLevel = z.enum(["no_clearance", "jschallenge", "managed", "interactive"]);
+const turnstileDomains = z.array(z.string().min(1).max(253)).max(10)
+  .describe("Hostnames or IP addresses where the widget is allowed to run");
+
+server.registerTool("list_turnstile_widgets", {
+  description: "List Turnstile widgets in the configured Cloudflare account.",
+  inputSchema: {
+    filter: z.string().max(512).optional().describe("Case-insensitive field filter, for example name:login or sitekey:0x4AAA"),
+    order: z.enum(["id", "sitekey", "name", "created_on", "modified_on"]).optional(),
+    direction: z.enum(["asc", "desc"]).optional(),
+  },
+}, async ({ filter, order, direction }) => output(await api.list(
+  `/accounts/${config.accountId}/challenges/widgets${query({ filter, order, direction })}`,
+)));
+
+server.registerTool("get_turnstile_widget", {
+  description: "Get the configuration and credentials for a Turnstile widget.",
+  inputSchema: { sitekey: turnstileSitekey },
+}, async ({ sitekey }) => output(await api.request(
+  `/accounts/${config.accountId}/challenges/widgets/${encodeURIComponent(sitekey)}`,
+)));
+
+const turnstileWidgetFields = {
+  domains: turnstileDomains,
+  mode: turnstileMode,
+  name: z.string().min(1).max(254),
+  botFightMode: z.boolean().optional().describe("Enable computationally expensive bot challenges (Enterprise only)"),
+  clearanceLevel: turnstileClearanceLevel.optional(),
+  ephemeralId: z.boolean().optional().describe("Return an ephemeral ID from Siteverify (Enterprise only)"),
+  offlabel: z.boolean().optional().describe("Hide Cloudflare branding (Enterprise only)"),
+};
+
+function turnstileWidgetBody(fields: {
+  domains: string[];
+  mode: z.infer<typeof turnstileMode>;
+  name: string;
+  botFightMode?: boolean;
+  clearanceLevel?: z.infer<typeof turnstileClearanceLevel>;
+  ephemeralId?: boolean;
+  offlabel?: boolean;
+  region?: "world" | "china";
+}) {
+  const { botFightMode, clearanceLevel, ephemeralId, ...rest } = fields;
+  return {
+    ...rest,
+    ...(botFightMode === undefined ? {} : { bot_fight_mode: botFightMode }),
+    ...(clearanceLevel === undefined ? {} : { clearance_level: clearanceLevel }),
+    ...(ephemeralId === undefined ? {} : { ephemeral_id: ephemeralId }),
+  };
+}
+
+server.registerTool("create_turnstile_widget", {
+  description: "Create a Turnstile widget. The response includes the new sitekey and secret key.",
+  inputSchema: {
+    ...turnstileWidgetFields,
+    region: z.enum(["world", "china"]).optional().describe("Deployment region; cannot be changed after creation"),
+  },
+}, async (fields) => output(await api.request(`/accounts/${config.accountId}/challenges/widgets`, {
+  method: "POST",
+  body: JSON.stringify(turnstileWidgetBody(fields)),
+})));
+
+server.registerTool("update_turnstile_widget", {
+  description: "Replace the mutable configuration of a Turnstile widget.",
+  inputSchema: { sitekey: turnstileSitekey, ...turnstileWidgetFields },
+}, async ({ sitekey, ...fields }) => output(await api.request(
+  `/accounts/${config.accountId}/challenges/widgets/${encodeURIComponent(sitekey)}`,
+  { method: "PUT", body: JSON.stringify(turnstileWidgetBody(fields)) },
+)));
+
+server.registerTool("rotate_turnstile_widget_secret", {
+  description: "Rotate a Turnstile widget secret. The response includes the new secret; the old secret may remain valid briefly.",
+  inputSchema: {
+    sitekey: turnstileSitekey,
+    invalidateImmediately: z.boolean().default(false),
+    confirm,
+  },
+}, async ({ sitekey, invalidateImmediately }) => output(await api.request(
+  `/accounts/${config.accountId}/challenges/widgets/${encodeURIComponent(sitekey)}/rotate_secret`,
+  { method: "POST", body: JSON.stringify({ invalidate_immediately: invalidateImmediately }) },
+)));
+
+server.registerTool("delete_turnstile_widget", {
+  description: "Permanently delete a Turnstile widget.",
+  inputSchema: { sitekey: turnstileSitekey, confirm },
+}, async ({ sitekey }) => output(await api.request(
+  `/accounts/${config.accountId}/challenges/widgets/${encodeURIComponent(sitekey)}`,
+  { method: "DELETE" },
 )));
 
 await server.connect(new StdioServerTransport());

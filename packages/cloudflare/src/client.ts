@@ -4,7 +4,7 @@ type ApiEnvelope<T> = {
   success: boolean;
   errors?: Array<{ code?: number; message?: string }>;
   result: T;
-  result_info?: { page?: number; total_pages?: number };
+  result_info?: { page?: number; per_page?: number; total_pages?: number; total_count?: number };
 };
 
 export type ApiList<T> = {
@@ -47,7 +47,14 @@ export class CloudflareClient {
         throw new Error(`Cloudflare API request failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
       }
       results.push(...envelope.result);
-      if (!envelope.result_info?.total_pages || page >= envelope.result_info.total_pages) return results;
+      const resultInfo = envelope.result_info;
+      if (resultInfo?.total_pages && page < resultInfo.total_pages) continue;
+      if (resultInfo?.total_count !== undefined) {
+        const currentPage = resultInfo.page ?? page;
+        const perPage = resultInfo.per_page ?? 50;
+        if (currentPage * perPage < resultInfo.total_count) continue;
+      }
+      return results;
     }
     throw new Error("Cloudflare API pagination exceeded 100 pages; narrow the request");
   }
