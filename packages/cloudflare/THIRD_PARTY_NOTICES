@@ -1,2 +1,2 @@
-This package bundles @modelcontextprotocol/sdk and zod. See their published
-package licenses for the applicable notices.
+This package bundles @modelcontextprotocol/sdk, hash-wasm, mime, and zod. See
+their published package licenses for the applicable notices.

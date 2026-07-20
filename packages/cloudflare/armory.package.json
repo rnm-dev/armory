@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cloudflare",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -11,7 +11,13 @@
   ],
   "permissions": {
     "networkHosts": ["api.cloudflare.com"],
-    "hostPaths": []
+    "hostPaths": [
+      {
+        "path": "~/Projects",
+        "mode": "read",
+        "purpose": "Read an operator-selected Pages build artifact, Pages Functions, and the project's local Wrangler compiler for direct upload."
+      }
+    ]
   },
   "dependencies": [],
   "configuration": {

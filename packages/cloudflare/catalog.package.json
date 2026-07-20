@@ -2,7 +2,7 @@
   "id": "cloudflare",
   "displayName": "Cloudflare",
   "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/cloudflare/assets/icon.png",
-  "summary": "Manage Cloudflare DNS, tunnels, Turnstile widgets, and Pages deployments.",
+  "summary": "Manage Cloudflare DNS, tunnels, Turnstile, and Git or direct-upload Pages deployments.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/cloudflare",
   "requirements": {

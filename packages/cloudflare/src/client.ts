@@ -16,11 +16,15 @@ export class CloudflareClient {
   constructor(private readonly config: CloudflareConfig) {}
 
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    return this.requestWithBearer(path, this.config.apiToken, init);
+  }
+
+  async requestWithBearer<T>(path: string, bearerToken: string, init: RequestInit = {}): Promise<T> {
     const sendsFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
     const response = await fetch(`${apiUrl()}${path}`, {
       ...init,
       headers: {
-        authorization: `Bearer ${this.config.apiToken}`,
+        authorization: `Bearer ${bearerToken}`,
         ...(sendsFormData ? {} : { "content-type": "application/json" }),
         ...init.headers,
       },

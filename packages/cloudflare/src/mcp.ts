@@ -3,12 +3,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { CloudflareClient } from "./client.js";
 import { readConfig } from "./config.js";
+import { directUploadPagesProject } from "./pages-direct-upload.js";
 
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.3.0" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.4.0" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");
@@ -349,7 +350,7 @@ type PagesDeployment = {
 };
 
 server.registerTool("deploy_pages_project", {
-  description: "Start a deployment for a Git-connected Cloudflare Pages project. Uses the production branch when branch is omitted.",
+  description: "Start a deployment from the remote source of a Git-connected Pages project. Do not use for local-only projects or local artifacts.",
   inputSchema: {
     projectName: pagesProjectName,
     branch: z.string().min(1).max(255).optional(),
@@ -379,5 +380,34 @@ server.registerTool("deploy_pages_project", {
     deploymentTrigger: deployment.deployment_trigger,
   });
 });
+
+server.registerTool("direct_upload_pages_project", {
+  description: "Upload the current local artifact and Pages Functions to a direct-upload Pages project. Uses the project's local Wrangler only to compile functions offline.",
+  inputSchema: {
+    projectName: pagesProjectName,
+    projectPath: z.string().min(1).max(4096).describe("Absolute project path under ~/Projects"),
+    artifactPath: z.string().min(1).max(1024).describe("Build artifact directory relative to projectPath, for example dist"),
+    functionsPath: z.string().min(1).max(1024).default("functions").describe("Pages Functions directory relative to projectPath"),
+    branch: z.string().min(1).max(255).optional().describe("Preview branch; omit to deploy to production"),
+    commitHash: z.string().min(1).max(64).optional(),
+    commitMessage: z.string().max(384).optional(),
+    commitDirty: z.boolean().default(false),
+    confirm,
+  },
+}, async ({ projectName, projectPath, artifactPath, functionsPath, branch, commitHash, commitMessage, commitDirty }) => output(
+  await directUploadPagesProject({
+    api,
+    home,
+    accountId: config.accountId,
+    projectName,
+    projectPath,
+    artifactPath,
+    functionsPath,
+    branch,
+    commitHash,
+    commitMessage,
+    commitDirty,
+  }),
+));
 
 await server.connect(new StdioServerTransport());

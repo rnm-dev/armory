@@ -18,6 +18,7 @@ const tunnelId = "11111111-2222-4333-8444-555555555555";
 const turnstileSitekey = "0x4AAAAAAAAAAAAAAAAAAAAAAA";
 const pagesProjectName = "turnstile-app";
 const pagesSecret = "pages_turnstile_secret_that_must_not_leak";
+const pagesUploadJwt = "pages_upload_jwt_that_must_not_leak";
 
 async function runHook(name, input, env) {
   const child = spawn(process.execPath, [path.join(packageDir, "dist", "hooks", `${name}.js`)], {
@@ -47,7 +48,7 @@ async function startCloudflare() {
     });
     res.setHeader("content-type", "application/json");
     const token = req.headers.authorization?.replace(/^Bearer /, "");
-    if (token !== apiToken && token !== accountApiToken) {
+    if (token !== apiToken && token !== accountApiToken && token !== pagesUploadJwt) {
       res.writeHead(401).end(JSON.stringify({ success: false, errors: [{ message: "unauthorized" }] }));
       return;
     }
@@ -73,6 +74,18 @@ async function startCloudflare() {
     }
     if (req.url === `/accounts/${accountId}/pages/projects?page=1&per_page=1`) {
       res.end(JSON.stringify({ success: true, result: [] }));
+      return;
+    }
+    if (req.method === "GET" && req.url === `/accounts/${accountId}/pages/projects/${pagesProjectName}/upload-token`) {
+      res.end(JSON.stringify({ success: true, result: { jwt: pagesUploadJwt } }));
+      return;
+    }
+    if (req.method === "POST" && req.url === "/pages/assets/check-missing") {
+      res.end(JSON.stringify({ success: true, result: JSON.parse(body).hashes }));
+      return;
+    }
+    if (req.method === "POST" && (req.url === "/pages/assets/upload" || req.url === "/pages/assets/upsert-hashes")) {
+      res.end(JSON.stringify({ success: true, result: null }));
       return;
     }
     if (req.method === "GET" && req.url?.startsWith("/zones?")) {
@@ -161,7 +174,12 @@ async function startCloudflare() {
 
 test("manifest declares scoped credential configuration and no host writes", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
-  assert.deepEqual(manifest.permissions, { networkHosts: ["api.cloudflare.com"], hostPaths: [] });
+  assert.deepEqual(manifest.permissions.networkHosts, ["api.cloudflare.com"]);
+  assert.deepEqual(manifest.permissions.hostPaths, [{
+    path: "~/Projects",
+    mode: "read",
+    purpose: "Read an operator-selected Pages build artifact, Pages Functions, and the project's local Wrangler compiler for direct upload.",
+  }]);
   assert.deepEqual(manifest.configuration.fields.map(({ id, type, required }) => ({ id, type, required })), [
     { id: "apiToken", type: "secret", required: true },
     { id: "accountId", type: "text", required: true },
@@ -179,7 +197,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.3.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.4.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -214,7 +232,7 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
 test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.3.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.4.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -246,6 +264,31 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
     assert.equal(verified.code, 0, verified.stderr);
     assert.equal(verified.stdout.includes(apiToken), false);
 
+    const projectRoot = path.join(home, "project");
+    const artifactRoot = path.join(projectRoot, "dist");
+    const functionsRoot = path.join(projectRoot, "functions");
+    const wranglerBin = path.join(projectRoot, "node_modules", "wrangler", "bin");
+    await fs.mkdir(artifactRoot, { recursive: true });
+    await fs.mkdir(functionsRoot, { recursive: true });
+    await fs.mkdir(wranglerBin, { recursive: true });
+    await fs.writeFile(path.join(artifactRoot, "index.html"), "<!doctype html><h1>RNM</h1>");
+    await fs.writeFile(path.join(functionsRoot, "api.js"), "export const onRequest = () => new Response('ok');");
+    await fs.writeFile(path.join(wranglerBin, "wrangler.js"), `
+      import fs from "node:fs/promises";
+      import path from "node:path";
+      const args = process.argv.slice(2);
+      const value = (flag) => args[args.indexOf(flag) + 1];
+      for (const [flag, contents] of [
+        ["--outfile", "export default { fetch() { return new Response('ok'); } };"],
+        ["--output-routes-path", JSON.stringify({ version: 1, include: ["/*"], exclude: [] })],
+        ["--output-config-path", JSON.stringify({ routes: [{ routePath: "/api" }] })],
+      ]) {
+        const filename = value(flag);
+        await fs.mkdir(path.dirname(filename), { recursive: true });
+        await fs.writeFile(filename, contents);
+      }
+    `);
+
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [path.join(packageDir, "dist", "mcp.js")],
@@ -264,6 +307,7 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
         "list_turnstile_widgets", "get_turnstile_widget", "create_turnstile_widget", "update_turnstile_widget",
         "rotate_turnstile_widget_secret", "delete_turnstile_widget",
         "set_pages_secret", "deploy_pages_project",
+        "direct_upload_pages_project",
       ]);
       await client.callTool({ name: "list_zones", arguments: {} });
       await client.callTool({ name: "create_zone", arguments: { name: "example.com", type: "full" } });
@@ -305,12 +349,27 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
         confirm: true,
       } });
       assert.equal(JSON.stringify(deployResult).includes(pagesSecret), false);
+      const directUploadResult = await client.callTool({ name: "direct_upload_pages_project", arguments: {
+        projectName: pagesProjectName,
+        projectPath: projectRoot,
+        artifactPath: "dist",
+        functionsPath: "functions",
+        commitMessage: "Deploy local RNM artifact",
+        confirm: true,
+      } });
+      const directUpload = JSON.parse(directUploadResult.content[0].text);
+      assert.equal(directUpload.functionsIncluded, true);
+      assert.equal(directUpload.files, 1);
+      assert.equal(JSON.stringify(directUploadResult).includes(pagesSecret), false);
     } finally {
       await client.close();
     }
 
     assert(fake.requests.length >= 7);
-    assert(fake.requests.every((request) => request.authorization === `Bearer ${apiToken}`));
+    assert(fake.requests.every((request) => [
+      `Bearer ${apiToken}`,
+      `Bearer ${pagesUploadJwt}`,
+    ].includes(request.authorization)));
     assert.equal(JSON.stringify(fake.requests.map(({ method, url, body }) => ({ method, url, body }))).includes(apiToken), false);
     assert(fake.requests.some((request) => request.url === "/zones" && request.body.includes(accountId)));
     assert(fake.requests.some((request) => request.url?.includes("cfd_tunnel") && request.body.includes('"config_src":"cloudflare"')));
@@ -324,6 +383,13 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
       && request.contentType?.startsWith("multipart/form-data; boundary=")
       && request.body.includes('name="branch"')
       && request.body.includes("main")));
+    assert(fake.requests.some((request) => request.url === "/pages/assets/upload"
+      && request.authorization === `Bearer ${pagesUploadJwt}`
+      && request.body.includes('"base64":true')));
+    assert(fake.requests.some((request) => request.method === "POST"
+      && request.url?.endsWith(`/pages/projects/${pagesProjectName}/deployments`)
+      && request.body.includes('name="manifest"')
+      && request.body.includes('name="_worker.js"')));
   } finally {
     await fs.rm(home, { recursive: true, force: true });
     await fake.close();
