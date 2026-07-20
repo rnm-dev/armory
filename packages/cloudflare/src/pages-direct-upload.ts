@@ -108,12 +108,24 @@ async function optionalFile(filename: string): Promise<Buffer | undefined> {
   });
 }
 
+async function createPagesFunctionsBundle(outputDirectory: string): Promise<{ bundle: Blob; entryBytes: number }> {
+  const entryPath = path.join(outputDirectory, "index.js");
+  const entry = await fs.readFile(entryPath).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") throw new Error("Pages Functions compilation did not create outdir/index.js");
+    throw error;
+  });
+  const workerForm = new FormData();
+  workerForm.set("metadata", JSON.stringify({ main_module: "index.js" }));
+  workerForm.set("index.js", new File([entry], "index.js", { type: "application/javascript+module" }));
+  return { bundle: await new Response(workerForm).blob(), entryBytes: entry.length };
+}
+
 async function compileFunctions(
   projectRoot: string,
   artifactRoot: string,
   functionsRelativePath: string,
   temporaryDirectory: string,
-): Promise<{ worker?: Buffer; routes?: Buffer; routingConfig?: Buffer }> {
+): Promise<{ worker?: Buffer; workerBundle?: Blob; workerBytes?: number; routes?: Buffer; routingConfig?: Buffer }> {
   const artifactWorker = await optionalFile(path.join(artifactRoot, "_worker.js"));
   if (artifactWorker) {
     return { worker: artifactWorker, routes: await optionalFile(path.join(artifactRoot, "_routes.json")) };
@@ -136,14 +148,14 @@ async function compileFunctions(
     throw new Error("Local Wrangler is required at projectPath/node_modules/wrangler to compile Pages Functions");
   }
 
-  const workerPath = path.join(temporaryDirectory, "_worker.js");
+  const workerOutputDirectory = path.join(temporaryDirectory, "worker");
   const routesPath = path.join(temporaryDirectory, "_routes.json");
   const routingConfigPath = path.join(temporaryDirectory, "functions-filepath-routing-config.json");
   try {
     await execFileAsync(process.execPath, [
       wranglerRealPath,
       "pages", "functions", "build", functionsRoot,
-      "--outfile", workerPath,
+      "--outdir", workerOutputDirectory,
       "--output-routes-path", routesPath,
       "--output-config-path", routingConfigPath,
       "--build-output-directory", artifactRoot,
@@ -163,8 +175,10 @@ async function compileFunctions(
     throw new Error("Pages Functions compilation failed; run the local Wrangler build for diagnostic details");
   }
 
+  const worker = await createPagesFunctionsBundle(workerOutputDirectory);
   return {
-    worker: await fs.readFile(workerPath),
+    workerBundle: worker.bundle,
+    workerBytes: worker.entryBytes,
     routes: await optionalFile(path.join(artifactRoot, "_routes.json")) || await optionalFile(routesPath),
     routingConfig: await optionalFile(routingConfigPath),
   };
@@ -217,7 +231,7 @@ async function uploadAssets(api: CloudflareClient, accountId: string, projectNam
   };
 }
 
-function setFile(form: FormData, field: string, contents: Buffer | undefined, filename: string) {
+function setFile(form: FormData, field: string, contents: Buffer | Blob | undefined, filename: string) {
   if (contents) form.set(field, new File([contents], filename));
 }
 
@@ -260,6 +274,7 @@ export async function directUploadPagesProject(options: DirectUploadOptions) {
     setFile(form, "_headers", headers, "_headers");
     setFile(form, "_redirects", redirects, "_redirects");
     setFile(form, "_worker.js", functions.worker, "_worker.js");
+    setFile(form, "_worker.bundle", functions.workerBundle, "_worker.bundle");
     setFile(form, "_routes.json", functions.routes, "_routes.json");
     setFile(form, "functions-filepath-routing-config.json", functions.routingConfig, "functions-filepath-routing-config.json");
 
@@ -279,7 +294,8 @@ export async function directUploadPagesProject(options: DirectUploadOptions) {
       files: assets.length,
       uploadedFiles: uploaded,
       cachedFiles: cached,
-      functionsIncluded: functions.worker !== undefined,
+      functionsIncluded: functions.worker !== undefined || functions.workerBundle !== undefined,
+      functionsWorkerBytes: functions.workerBytes,
     };
   } finally {
     await fs.rm(temporaryDirectory, { recursive: true, force: true });

@@ -9,7 +9,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.5.0" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.5.1" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");

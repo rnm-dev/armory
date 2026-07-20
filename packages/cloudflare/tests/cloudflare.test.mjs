@@ -19,6 +19,7 @@ const turnstileSitekey = "0x4AAAAAAAAAAAAAAAAAAAAAAA";
 const pagesProjectName = "turnstile-app";
 const pagesSecret = "pages_turnstile_secret_that_must_not_leak";
 const pagesUploadJwt = "pages_upload_jwt_that_must_not_leak";
+const compiledFunctionsWorker = "export default { fetch() { return new Response('compiled-functions-marker'); } };";
 
 async function runHook(name, input, env) {
   const child = spawn(process.execPath, [path.join(packageDir, "dist", "hooks", `${name}.js`)], {
@@ -223,7 +224,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -258,7 +259,7 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
 test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -304,8 +305,12 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
       import path from "node:path";
       const args = process.argv.slice(2);
       const value = (flag) => args[args.indexOf(flag) + 1];
+      const outdir = value("--outdir");
+      await fs.mkdir(outdir, { recursive: true });
+      await fs.writeFile(path.join(outdir, "index.js"), ${JSON.stringify(compiledFunctionsWorker)});
+      await fs.writeFile(path.join(process.cwd(), ".wrangler-test-args.json"), JSON.stringify(args));
+      process.stdout.write("diagnostic worker.mjs payload that must not be uploaded");
       for (const [flag, contents] of [
-        ["--outfile", "export default { fetch() { return new Response('ok'); } };"],
         ["--output-routes-path", JSON.stringify({ version: 1, include: ["/*"], exclude: [] })],
         ["--output-config-path", JSON.stringify({ routes: [{ routePath: "/api" }] })],
       ]) {
@@ -395,6 +400,7 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
       } });
       const directUpload = JSON.parse(directUploadResult.content[0].text);
       assert.equal(directUpload.functionsIncluded, true);
+      assert.equal(directUpload.functionsWorkerBytes, Buffer.byteLength(compiledFunctionsWorker));
       assert.equal(directUpload.files, 1);
       assert.equal(JSON.stringify(directUploadResult).includes(pagesSecret), false);
     } finally {
@@ -425,7 +431,15 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
     assert(fake.requests.some((request) => request.method === "POST"
       && request.url?.endsWith(`/pages/projects/${pagesProjectName}/deployments`)
       && request.body.includes('name="manifest"')
-      && request.body.includes('name="_worker.js"')));
+      && request.body.includes('name="_worker.bundle"; filename="_worker.bundle"')
+      && request.body.includes('name="index.js"; filename="index.js"')
+      && request.body.includes(compiledFunctionsWorker)
+      && !request.body.includes('name="_worker.js"')
+      && !request.body.includes("worker.mjs")));
+    const wranglerArgs = JSON.parse(await fs.readFile(path.join(projectRoot, ".wrangler-test-args.json"), "utf8"));
+    assert.deepEqual(wranglerArgs.slice(0, 4), ["pages", "functions", "build", await fs.realpath(functionsRoot)]);
+    assert(wranglerArgs.includes("--outdir"));
+    assert.equal(wranglerArgs.includes("--outfile"), false);
   } finally {
     await fs.rm(home, { recursive: true, force: true });
     await fake.close();
