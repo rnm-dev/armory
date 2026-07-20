@@ -7,7 +7,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new SearchConsoleClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-search-console", version: "0.1.0" });
+const server = new McpServer({ name: "armory-google-search-console", version: "0.2.0" });
 
 const siteUrl = z.string().min(1).max(2048).describe("Search Console property URL, such as https://example.com/ or sc-domain:example.com");
 const absoluteUrl = z.string().url().max(4096);
@@ -25,6 +25,22 @@ server.registerTool("get_site", {
   description: "Get the permission level for a Search Console property.",
   inputSchema: { siteUrl },
 }, async ({ siteUrl }) => output(await api.request("webmasters", `/sites/${encodeURIComponent(siteUrl)}`)));
+
+server.registerTool("add_site", {
+  description: "Add a property to the configured service account's set of Search Console properties. This does not verify ownership.",
+  inputSchema: { siteUrl },
+}, async ({ siteUrl }) => {
+  await api.request("webmasters", `/sites/${encodeURIComponent(siteUrl)}`, { method: "PUT" }, true);
+  return output({ success: true, siteUrl });
+});
+
+server.registerTool("delete_site", {
+  description: "Remove a property from the configured service account's set of Search Console properties. This does not delete the website.",
+  inputSchema: { siteUrl },
+}, async ({ siteUrl }) => {
+  await api.request("webmasters", `/sites/${encodeURIComponent(siteUrl)}`, { method: "DELETE" }, true);
+  return output({ success: true, siteUrl });
+});
 
 const filter = z.object({
   dimension: z.enum(["country", "device", "page", "query", "searchAppearance"]),
@@ -73,6 +89,32 @@ server.registerTool("get_sitemap", {
   "webmasters",
   `/sites/${encodeURIComponent(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`,
 )));
+
+server.registerTool("submit_sitemap", {
+  description: "Submit a sitemap to Google Search Console for crawling.",
+  inputSchema: { siteUrl, feedpath: absoluteUrl.describe("Absolute sitemap URL") },
+}, async ({ siteUrl, feedpath }) => {
+  await api.request(
+    "webmasters",
+    `/sites/${encodeURIComponent(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`,
+    { method: "PUT" },
+    true,
+  );
+  return output({ success: true, siteUrl, feedpath });
+});
+
+server.registerTool("delete_sitemap", {
+  description: "Remove a sitemap submission from Google Search Console. This does not delete the sitemap file from the website.",
+  inputSchema: { siteUrl, feedpath: absoluteUrl.describe("Absolute sitemap URL") },
+}, async ({ siteUrl, feedpath }) => {
+  await api.request(
+    "webmasters",
+    `/sites/${encodeURIComponent(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`,
+    { method: "DELETE" },
+    true,
+  );
+  return output({ success: true, siteUrl, feedpath });
+});
 
 server.registerTool("inspect_url", {
   description: "Inspect a URL's indexed version, including coverage, crawl, canonical, mobile usability, and rich-results status.",

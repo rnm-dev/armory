@@ -1,7 +1,7 @@
 import { createSign } from "node:crypto";
 import type { ServiceAccountCredentials } from "./config.js";
 
-const READONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
+const WEBMASTERS_SCOPE = "https://www.googleapis.com/auth/webmasters";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DEFAULT_WEBMASTERS_URL = "https://www.googleapis.com/webmasters/v3";
 const DEFAULT_INSPECTION_URL = "https://searchconsole.googleapis.com/v1";
@@ -30,7 +30,7 @@ export class SearchConsoleClient {
     const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
     const unsigned = `${encode({ alg: "RS256", typ: "JWT", ...(this.credentials.private_key_id ? { kid: this.credentials.private_key_id } : {}) })}.${encode({
       iss: this.credentials.client_email,
-      scope: READONLY_SCOPE,
+      scope: WEBMASTERS_SCOPE,
       aud: audience,
       iat: now,
       exp: now + 3600,
@@ -58,7 +58,12 @@ export class SearchConsoleClient {
     return this.token.value;
   }
 
-  async request<T>(service: "webmasters" | "inspection", path: string, init: RequestInit = {}): Promise<T> {
+  async request<T>(
+    service: "webmasters" | "inspection",
+    path: string,
+    init: RequestInit = {},
+    allowEmptyResponse = false,
+  ): Promise<T> {
     const base = service === "webmasters"
       ? endpoint("WEBMASTERS", DEFAULT_WEBMASTERS_URL)
       : endpoint("INSPECTION", DEFAULT_INSPECTION_URL);
@@ -71,11 +76,21 @@ export class SearchConsoleClient {
       },
       signal: AbortSignal.timeout(30_000),
     });
-    const body = await response.json().catch(() => undefined) as T | { error?: { message?: string } } | undefined;
+    const responseText = await response.text();
+    let body: T | { error?: { message?: string } } | undefined;
+    if (responseText) {
+      try {
+        body = JSON.parse(responseText) as T | { error?: { message?: string } };
+      } catch {
+        body = undefined;
+      }
+    }
     if (!response.ok) {
       const detail = body && typeof body === "object" && "error" in body ? body.error?.message : undefined;
       throw new Error(`Google Search Console API request failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
     }
+    // Google returns an empty body for successful write operations.
+    if (!responseText && allowEmptyResponse) return undefined as T;
     if (body === undefined) throw new Error("Google Search Console API returned an invalid response");
     return body as T;
   }
