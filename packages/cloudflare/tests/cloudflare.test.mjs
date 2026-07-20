@@ -16,6 +16,8 @@ const accountId = "0123456789abcdef0123456789abcdef";
 const zoneId = "fedcba9876543210fedcba9876543210";
 const tunnelId = "11111111-2222-4333-8444-555555555555";
 const turnstileSitekey = "0x4AAAAAAAAAAAAAAAAAAAAAAA";
+const pagesProjectName = "turnstile-app";
+const pagesSecret = "pages_turnstile_secret_that_must_not_leak";
 
 async function runHook(name, input, env) {
   const child = spawn(process.execPath, [path.join(packageDir, "dist", "hooks", `${name}.js`)], {
@@ -36,7 +38,13 @@ async function startCloudflare() {
   const server = http.createServer(async (req, res) => {
     let body = "";
     for await (const chunk of req) body += chunk;
-    requests.push({ method: req.method, url: req.url, authorization: req.headers.authorization, body });
+    requests.push({
+      method: req.method,
+      url: req.url,
+      authorization: req.headers.authorization,
+      contentType: req.headers["content-type"],
+      body,
+    });
     res.setHeader("content-type", "application/json");
     const token = req.headers.authorization?.replace(/^Bearer /, "");
     if (token !== apiToken && token !== accountApiToken) {
@@ -60,6 +68,10 @@ async function startCloudflare() {
       return;
     }
     if (req.url === `/accounts/${accountId}/challenges/widgets?page=1&per_page=5`) {
+      res.end(JSON.stringify({ success: true, result: [] }));
+      return;
+    }
+    if (req.url === `/accounts/${accountId}/pages/projects?page=1&per_page=1`) {
       res.end(JSON.stringify({ success: true, result: [] }));
       return;
     }
@@ -111,6 +123,25 @@ async function startCloudflare() {
       res.end(JSON.stringify({ success: true, result: { sitekey: turnstileSitekey } }));
       return;
     }
+    if (req.method === "PATCH" && req.url === `/accounts/${accountId}/pages/projects/${pagesProjectName}`) {
+      res.end(JSON.stringify({ success: true, result: {
+        name: pagesProjectName,
+        deployment_configs: JSON.parse(body).deployment_configs,
+      } }));
+      return;
+    }
+    if (req.method === "POST" && req.url === `/accounts/${accountId}/pages/projects/${pagesProjectName}/deployments`) {
+      res.end(JSON.stringify({ success: true, result: {
+        id: "pages-deployment-1",
+        project_name: pagesProjectName,
+        environment: "production",
+        url: `https://${pagesProjectName}.pages.dev`,
+        aliases: [`https://${pagesProjectName}.pages.dev`],
+        env_vars: { TURNSTILE_SECRET: { type: "secret_text", value: pagesSecret } },
+        latest_stage: { name: "queued", status: "active" },
+      } }));
+      return;
+    }
     if (req.method === "PUT" && req.url === `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`) {
       res.end(JSON.stringify({ success: true, result: { tunnel_id: tunnelId, ...JSON.parse(body) } }));
       return;
@@ -140,6 +171,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
   assert.match(manifest.configuration.fields[0].help, /Zone DNS Edit/);
   assert.match(manifest.configuration.fields[0].help, /Cloudflare Tunnel Write/);
   assert.match(manifest.configuration.fields[0].help, /Turnstile Sites Write/);
+  assert.match(manifest.configuration.fields[0].help, /Pages Write/);
   assert.match(manifest.configuration.fields[1].help, /Account home/);
   assert.match(manifest.configuration.fields[1].help, /Copy account ID/);
 });
@@ -147,7 +179,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.2.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.3.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -179,10 +211,10 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
   }
 });
 
-test("configures, verifies, and manages zones, records, tunnels, and Turnstile without leaking credentials", async () => {
+test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.2.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.3.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -231,6 +263,7 @@ test("configures, verifies, and manages zones, records, tunnels, and Turnstile w
         "get_tunnel_configuration", "put_tunnel_configuration",
         "list_turnstile_widgets", "get_turnstile_widget", "create_turnstile_widget", "update_turnstile_widget",
         "rotate_turnstile_widget_secret", "delete_turnstile_widget",
+        "set_pages_secret", "deploy_pages_project",
       ]);
       await client.callTool({ name: "list_zones", arguments: {} });
       await client.callTool({ name: "create_zone", arguments: { name: "example.com", type: "full" } });
@@ -256,6 +289,22 @@ test("configures, verifies, and manages zones, records, tunnels, and Turnstile w
         sitekey: turnstileSitekey, invalidateImmediately: false, confirm: true,
       } });
       await client.callTool({ name: "delete_turnstile_widget", arguments: { sitekey: turnstileSitekey, confirm: true } });
+      const secretResult = await client.callTool({ name: "set_pages_secret", arguments: {
+        projectName: pagesProjectName,
+        environment: "production",
+        secretName: "TURNSTILE_SECRET",
+        secretValue: pagesSecret,
+        confirm: true,
+      } });
+      assert.equal(JSON.stringify(secretResult).includes(pagesSecret), false);
+      const deployResult = await client.callTool({ name: "deploy_pages_project", arguments: {
+        projectName: pagesProjectName,
+        branch: "main",
+        commitHash: "0123456789abcdef",
+        commitMessage: "Deploy Turnstile integration",
+        confirm: true,
+      } });
+      assert.equal(JSON.stringify(deployResult).includes(pagesSecret), false);
     } finally {
       await client.close();
     }
@@ -267,6 +316,14 @@ test("configures, verifies, and manages zones, records, tunnels, and Turnstile w
     assert(fake.requests.some((request) => request.url?.includes("cfd_tunnel") && request.body.includes('"config_src":"cloudflare"')));
     assert(fake.requests.some((request) => request.url?.includes("challenges/widgets") && request.body.includes('"clearance_level":"managed"')));
     assert(fake.requests.some((request) => request.url?.endsWith("rotate_secret") && request.body === '{"invalidate_immediately":false}'));
+    assert(fake.requests.some((request) => request.method === "PATCH"
+      && request.url?.endsWith(`/pages/projects/${pagesProjectName}`)
+      && request.body.includes(`\"TURNSTILE_SECRET\":{\"type\":\"secret_text\",\"value\":\"${pagesSecret}\"}`)));
+    assert(fake.requests.some((request) => request.method === "POST"
+      && request.url?.endsWith(`/pages/projects/${pagesProjectName}/deployments`)
+      && request.contentType?.startsWith("multipart/form-data; boundary=")
+      && request.body.includes('name="branch"')
+      && request.body.includes("main")));
   } finally {
     await fs.rm(home, { recursive: true, force: true });
     await fake.close();

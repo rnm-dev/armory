@@ -8,7 +8,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.2.0" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.3.0" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");
@@ -305,5 +305,79 @@ server.registerTool("delete_turnstile_widget", {
   `/accounts/${config.accountId}/challenges/widgets/${encodeURIComponent(sitekey)}`,
   { method: "DELETE" },
 )));
+
+const pagesProjectName = z.string().min(1).max(58).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/)
+  .describe("Cloudflare Pages project name");
+const pagesEnvironment = z.enum(["production", "preview"]);
+
+server.registerTool("set_pages_secret", {
+  description: "Set an encrypted environment secret for a Cloudflare Pages project without returning its value.",
+  inputSchema: {
+    projectName: pagesProjectName,
+    environment: pagesEnvironment,
+    secretName: z.string().min(1).max(256).regex(/^[A-Za-z_][A-Za-z0-9_]*$/).default("TURNSTILE_SECRET"),
+    secretValue: z.string().min(1).max(65536).describe("Secret value; it is sent only to Cloudflare and is not returned"),
+    confirm,
+  },
+}, async ({ projectName, environment, secretName, secretValue }) => {
+  try {
+    await api.request(`/accounts/${config.accountId}/pages/projects/${encodeURIComponent(projectName)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        deployment_configs: {
+          [environment]: {
+            env_vars: { [secretName]: { type: "secret_text", value: secretValue } },
+          },
+        },
+      }),
+    });
+  } catch {
+    throw new Error("Cloudflare Pages secret update failed");
+  }
+  return output({ projectName, environment, secretName, updated: true });
+});
+
+type PagesDeployment = {
+  id?: string;
+  project_name?: string;
+  environment?: string;
+  url?: string;
+  aliases?: string[];
+  created_on?: string;
+  latest_stage?: unknown;
+  deployment_trigger?: unknown;
+};
+
+server.registerTool("deploy_pages_project", {
+  description: "Start a deployment for a Git-connected Cloudflare Pages project. Uses the production branch when branch is omitted.",
+  inputSchema: {
+    projectName: pagesProjectName,
+    branch: z.string().min(1).max(255).optional(),
+    commitHash: z.string().min(1).max(64).optional(),
+    commitMessage: z.string().max(1024).optional(),
+    commitDirty: z.boolean().default(false),
+    confirm,
+  },
+}, async ({ projectName, branch, commitHash, commitMessage, commitDirty }) => {
+  const form = new FormData();
+  if (branch !== undefined) form.set("branch", branch);
+  if (commitHash !== undefined) form.set("commit_hash", commitHash);
+  if (commitMessage !== undefined) form.set("commit_message", commitMessage);
+  form.set("commit_dirty", String(commitDirty));
+  const deployment = await api.request<PagesDeployment>(
+    `/accounts/${config.accountId}/pages/projects/${encodeURIComponent(projectName)}/deployments`,
+    { method: "POST", body: form },
+  );
+  return output({
+    id: deployment.id,
+    projectName: deployment.project_name ?? projectName,
+    environment: deployment.environment,
+    url: deployment.url,
+    aliases: deployment.aliases,
+    createdOn: deployment.created_on,
+    latestStage: deployment.latest_stage,
+    deploymentTrigger: deployment.deployment_trigger,
+  });
+});
 
 await server.connect(new StdioServerTransport());

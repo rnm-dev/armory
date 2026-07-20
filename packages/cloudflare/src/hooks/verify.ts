@@ -21,6 +21,7 @@ try {
     client.request(`/zones?account.id=${config.accountId}&page=1&per_page=5`),
     client.request(`/accounts/${config.accountId}/cfd_tunnel?is_deleted=false&page=1&per_page=1`),
     client.request(`/accounts/${config.accountId}/challenges/widgets?page=1&per_page=5`),
+    client.request(`/accounts/${config.accountId}/pages/projects?page=1&per_page=1`),
   ]);
   result({ ok: true, message: "Cloudflare connection verified" });
 } catch {
