@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-20T07:31:19.401Z",
+  "updatedAt": "2026-07-20T07:32:18.786Z",
   "packages": [
     {
       "id": "heroboard",
@@ -416,6 +416,48 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-tag-manager-v0.1.0/google-tag-manager-0.1.0.tar.gz",
             "size": 501171,
             "sha256": "e97ec89e32768242f9d7f3ec92904003b269783a6b50797144c0be1e4bb4c50d"
+          }
+        }
+      ]
+    },
+    {
+      "id": "google-play",
+      "displayName": "Google Play",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-play/assets/icon.png",
+      "summary": "Inspect Google Play releases and safely manage promotions and staged rollouts.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-play",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "0.1.0",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-play-v0.1.0/google-play-0.1.0.tar.gz",
+            "size": 267443,
+            "sha256": "b75d65904cb98ee628f9b62ef35b93421fe7c5176f0d55f508a0f745ce76cb6f"
           }
         }
       ]
