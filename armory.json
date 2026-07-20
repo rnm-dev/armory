@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-20T10:14:33.829Z",
+  "updatedAt": "2026-07-20T10:58:58.194Z",
   "packages": [
     {
       "id": "heroboard",
@@ -49,14 +49,14 @@
       "id": "cloudflare",
       "displayName": "Cloudflare",
       "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/cloudflare/assets/icon.png",
-      "summary": "Manage Cloudflare DNS, tunnels, Turnstile, and Git or direct-upload Pages deployments.",
+      "summary": "Manage Cloudflare DNS, tunnels, Turnstile, and Pages deployments, uploads, and status.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/cloudflare",
       "requirements": {
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.4.0",
+      "latest": "0.5.0",
       "versions": [
         {
           "version": "0.1.0",
@@ -191,6 +191,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/cloudflare-v0.4.0/cloudflare-0.4.0.tar.gz",
             "size": 531468,
             "sha256": "e80bfcb8a4f007405e95a9b96a064a85cd635ce7fd52a9ff18484676fa5905ba"
+          }
+        },
+        {
+          "version": "0.5.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/cloudflare-v0.5.0/cloudflare-0.5.0.tar.gz",
+            "size": 532072,
+            "sha256": "4e1db1372114db57572a946a8cf8768b10997b726ff3d9ef84f1abbc371cf8de"
           }
         }
       ]
