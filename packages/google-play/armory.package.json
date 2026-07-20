@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "google-play",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["androidpublisher.googleapis.com", "oauth2.googleapis.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "serviceAccountFile",
+        "label": "Service account JSON",
+        "help": "In Google Cloud Console, enable the Google Play Android Developer API and create a service account key in JSON format. In Play Console, grant that service account access to the app and the release permissions you want Peon to use, then select the downloaded JSON file here.",
+        "type": "file",
+        "required": true,
+        "validation": { "maxLength": 1048576 }
+      },
+      {
+        "id": "packageName",
+        "label": "Default Android package name",
+        "help": "Enter the application ID from Play Console, for example com.example.app. Tools can override this for other apps available to the same service account.",
+        "type": "text",
+        "required": true,
+        "validation": { "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$", "maxLength": 255 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/google-play.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "google_play",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}
