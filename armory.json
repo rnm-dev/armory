@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-17T06:46:20.851Z",
+  "updatedAt": "2026-07-20T07:31:19.401Z",
   "packages": [
     {
       "id": "heroboard",
@@ -202,14 +202,14 @@
       "id": "google-search-console",
       "displayName": "Google Search Console",
       "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-search-console/assets/icon.png",
-      "summary": "Inspect properties, search performance, sitemaps, and Google index status.",
+      "summary": "Manage properties and sitemaps, query search performance, and inspect Google index status.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-search-console",
       "requirements": {
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.0",
+      "latest": "0.2.0",
       "versions": [
         {
           "version": "0.1.0",
@@ -236,6 +236,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-search-console-v0.1.0/google-search-console-0.1.0.tar.gz",
             "size": 192432,
             "sha256": "c8beb876a5dc6a90c69f25cb9ad4f5548fff9e01ed504d713d57a702559ddcef"
+          }
+        },
+        {
+          "version": "0.2.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-search-console-v0.2.0/google-search-console-0.2.0.tar.gz",
+            "size": 471798,
+            "sha256": "8aa563069bf957176c600cd29a143edc446d2a7db8ffcbf6bff7c5ae591640dc"
           }
         }
       ]
