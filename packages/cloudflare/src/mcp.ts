@@ -9,7 +9,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.4.0" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.5.0" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");
@@ -340,14 +340,62 @@ server.registerTool("set_pages_secret", {
 
 type PagesDeployment = {
   id?: string;
+  short_id?: string;
   project_name?: string;
   environment?: string;
   url?: string;
   aliases?: string[];
   created_on?: string;
-  latest_stage?: unknown;
+  modified_on?: string;
+  latest_stage?: PagesDeploymentStage;
+  stages?: PagesDeploymentStage[];
   deployment_trigger?: unknown;
+  is_skipped?: boolean;
+  skip_reason?: string;
+  uses_functions?: boolean;
 };
+
+type PagesDeploymentStage = {
+  name?: string;
+  status?: string;
+  started_on?: string | null;
+  ended_on?: string | null;
+};
+
+type PagesDeploymentLogs = {
+  data?: Array<{ line?: string; ts?: string }>;
+};
+
+function sanitizeDeploymentError(line: string): string {
+  return line
+    .replace(/^\s*Error:\s*/i, "")
+    .replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED]")
+    .replace(
+      /\b([A-Za-z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY)[A-Za-z0-9_]*)\s*([=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      "$1$2[REDACTED]",
+    )
+    .slice(0, 2_000);
+}
+
+function deploymentStatus(deployment: PagesDeployment, projectName: string) {
+  return {
+    id: deployment.id,
+    shortId: deployment.short_id,
+    projectName: deployment.project_name ?? projectName,
+    environment: deployment.environment,
+    url: deployment.url,
+    aliases: deployment.aliases,
+    createdOn: deployment.created_on,
+    modifiedOn: deployment.modified_on,
+    latestStage: deployment.latest_stage,
+    stages: deployment.stages,
+    deploymentTrigger: deployment.deployment_trigger,
+    isSkipped: deployment.is_skipped,
+    skipReason: deployment.skip_reason,
+    usesFunctions: deployment.uses_functions,
+  };
+}
 
 server.registerTool("deploy_pages_project", {
   description: "Start a deployment from the remote source of a Git-connected Pages project. Do not use for local-only projects or local artifacts.",
@@ -409,5 +457,34 @@ server.registerTool("direct_upload_pages_project", {
     commitDirty,
   }),
 ));
+
+server.registerTool("get_pages_deployment_status", {
+  description: "Get the current status of a Pages deployment and, on failure, a redacted final error line. Environment variables and full logs are never returned.",
+  inputSchema: {
+    projectName: pagesProjectName,
+    deploymentId: z.string().min(1).max(128).describe("Cloudflare Pages deployment ID"),
+    includeFailure: z.boolean().default(true).describe("Fetch a redacted final error line when the deployment failed"),
+  },
+}, async ({ projectName, deploymentId, includeFailure }) => {
+  const deploymentPath = `/accounts/${config.accountId}/pages/projects/${encodeURIComponent(projectName)}/deployments/${encodeURIComponent(deploymentId)}`;
+  const deployment = await api.request<PagesDeployment>(deploymentPath);
+  const result: ReturnType<typeof deploymentStatus> & {
+    failureMessage?: string;
+    failureDetailsAvailable?: boolean;
+  } = deploymentStatus(deployment, projectName);
+
+  if (includeFailure && deployment.latest_stage?.status === "failure") {
+    try {
+      const logs = await api.request<PagesDeploymentLogs>(`${deploymentPath}/history/logs?size=100`);
+      const finalLine = logs.data?.map(({ line }) => line?.trim()).filter((line): line is string => Boolean(line)).at(-1);
+      result.failureDetailsAvailable = Boolean(finalLine);
+      if (finalLine) result.failureMessage = sanitizeDeploymentError(finalLine);
+    } catch {
+      result.failureDetailsAvailable = false;
+    }
+  }
+
+  return output(result);
+});
 
 await server.connect(new StdioServerTransport());

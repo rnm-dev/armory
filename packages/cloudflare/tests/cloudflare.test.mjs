@@ -155,6 +155,32 @@ async function startCloudflare() {
       } }));
       return;
     }
+    if (req.method === "GET" && req.url === `/accounts/${accountId}/pages/projects/${pagesProjectName}/deployments/pages-deployment-1`) {
+      res.end(JSON.stringify({ success: true, result: {
+        id: "pages-deployment-1",
+        short_id: "pages-de",
+        project_name: pagesProjectName,
+        environment: "production",
+        url: `https://${pagesProjectName}.pages.dev`,
+        aliases: [`https://${pagesProjectName}.pages.dev`],
+        env_vars: { TURNSTILE_SECRET: { type: "secret_text", value: pagesSecret } },
+        latest_stage: { name: "deploy", status: "failure", started_on: "2026-07-20T10:00:00Z", ended_on: "2026-07-20T10:01:00Z" },
+        stages: [{ name: "deploy", status: "failure", started_on: "2026-07-20T10:00:00Z", ended_on: "2026-07-20T10:01:00Z" }],
+        uses_functions: true,
+      } }));
+      return;
+    }
+    if (req.method === "GET" && req.url === `/accounts/${accountId}/pages/projects/${pagesProjectName}/deployments/pages-deployment-1/history/logs?size=100`) {
+      res.end(JSON.stringify({ success: true, result: {
+        data: [
+          { line: "Building Pages Functions", ts: "2026-07-20T10:00:30Z" },
+          { line: `Error: Functions startup failed; TURNSTILE_SECRET=${pagesSecret}`, ts: "2026-07-20T10:01:00Z" },
+        ],
+        total: 2,
+        includes_container_logs: false,
+      } }));
+      return;
+    }
     if (req.method === "PUT" && req.url === `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`) {
       res.end(JSON.stringify({ success: true, result: { tunnel_id: tunnelId, ...JSON.parse(body) } }));
       return;
@@ -197,7 +223,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.4.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -232,7 +258,7 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
 test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.4.0", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -307,7 +333,7 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
         "list_turnstile_widgets", "get_turnstile_widget", "create_turnstile_widget", "update_turnstile_widget",
         "rotate_turnstile_widget_secret", "delete_turnstile_widget",
         "set_pages_secret", "deploy_pages_project",
-        "direct_upload_pages_project",
+        "direct_upload_pages_project", "get_pages_deployment_status",
       ]);
       await client.callTool({ name: "list_zones", arguments: {} });
       await client.callTool({ name: "create_zone", arguments: { name: "example.com", type: "full" } });
@@ -349,6 +375,16 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
         confirm: true,
       } });
       assert.equal(JSON.stringify(deployResult).includes(pagesSecret), false);
+      const deploymentStatusResult = await client.callTool({ name: "get_pages_deployment_status", arguments: {
+        projectName: pagesProjectName,
+        deploymentId: "pages-deployment-1",
+      } });
+      const deploymentStatus = JSON.parse(deploymentStatusResult.content[0].text);
+      assert.equal(deploymentStatus.latestStage.status, "failure");
+      assert.equal(deploymentStatus.failureDetailsAvailable, true);
+      assert.match(deploymentStatus.failureMessage, /TURNSTILE_SECRET=\[REDACTED\]/);
+      assert.equal(JSON.stringify(deploymentStatusResult).includes(pagesSecret), false);
+      assert.equal(JSON.stringify(deploymentStatusResult).includes("env_vars"), false);
       const directUploadResult = await client.callTool({ name: "direct_upload_pages_project", arguments: {
         projectName: pagesProjectName,
         projectPath: projectRoot,
