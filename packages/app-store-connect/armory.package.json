@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "app-store-connect",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["api.appstoreconnect.apple.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "configuration": {
+    "fields": [
+      {
+        "id": "issuerId",
+        "label": "Issuer ID",
+        "help": "In App Store Connect, open Users and Access > Integrations > App Store Connect API > Team Keys and copy the Issuer ID.",
+        "type": "text",
+        "required": true,
+        "validation": { "pattern": "^[A-Za-z0-9-]{2,64}$", "maxLength": 64 }
+      },
+      {
+        "id": "keyId",
+        "label": "Key ID",
+        "help": "Copy the Key ID for a Team API key with only the App Store Connect roles Peon needs.",
+        "type": "text",
+        "required": true,
+        "validation": { "pattern": "^[A-Za-z0-9]{2,64}$", "maxLength": 64 }
+      },
+      {
+        "id": "privateKeyFile",
+        "label": "Private key (.p8)",
+        "help": "Select the AuthKey_<Key ID>.p8 file downloaded from App Store Connect. Apple lets you download this private key only once.",
+        "type": "file",
+        "required": true,
+        "validation": { "maxLength": 65536 }
+      },
+      {
+        "id": "defaultAppId",
+        "label": "Default app resource ID",
+        "help": "Optional. Use list_apps to find the opaque App Store Connect resource ID. Tools can override this value.",
+        "type": "text",
+        "required": false,
+        "validation": { "pattern": "^[A-Za-z0-9.-]{1,128}$", "maxLength": 128 }
+      }
+    ],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/app-store-connect.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "app_store_connect",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}
