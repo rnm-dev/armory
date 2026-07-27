@@ -10,12 +10,17 @@ try {
   result({ ok: true, message: "App Store Connect connection verified" });
 } catch (error) {
   const denied = error instanceof AppStoreConnectApiError && (error.httpStatus === 401 || error.httpStatus === 403);
+  const authentication = error instanceof AppStoreConnectApiError && error.httpStatus === 401;
   result({
     ok: false,
-    message: denied
-      ? "App Store Connect rejected the Team API key or its role permissions"
+    message: authentication
+      ? "App Store Connect rejected the API key credentials; check the key type, Key ID, and matching .p8 file"
+      : denied
+      ? "App Store Connect accepted the API key but its role does not allow listing apps"
       : "App Store Connect connection could not be verified",
-    errorCode: denied ? "CREDENTIAL_OR_PERMISSION_DENIED" : "VERIFICATION_FAILED",
+    errorCode: authentication
+      ? "CREDENTIAL_INVALID"
+      : denied ? "PERMISSION_DENIED" : "VERIFICATION_FAILED",
   });
   process.exitCode = 1;
 }

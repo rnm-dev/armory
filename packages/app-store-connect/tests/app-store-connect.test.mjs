@@ -13,7 +13,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const issuerId = "57246542-96fe-1a63-e053-0824d011072a";
 const keyId = "2X9R4HXF34";
-const defaultAppId = "6446998023";
+const appId = "6446998023";
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" });
 const privateKeySecret = privateKeyPem.split("\n")[1];
@@ -55,24 +55,35 @@ async function startAppleApi() {
 
     res.setHeader("content-type", "application/json");
     if (req.method === "GET" && req.url?.startsWith("/v1/apps?")) {
-      res.end(JSON.stringify({ data: [{ type: "apps", id: defaultAppId, attributes: { name: "Example", bundleId: "com.example.app" } }] }));
+      res.end(JSON.stringify({ data: [{ type: "apps", id: appId, attributes: { name: "Example", bundleId: "com.example.app" } }] }));
       return;
     }
-    if (req.method === "GET" && req.url?.startsWith(`/v1/apps/${defaultAppId}/builds?`)) {
+    if (req.method === "GET" && req.url?.startsWith(`/v1/apps/${appId}/builds?`)) {
       res.end(JSON.stringify({ data: [{ type: "builds", id: "build-1", attributes: { version: "42", processingState: "VALID" } }] }));
       return;
     }
-    if (req.method === "GET" && req.url?.startsWith(`/v1/apps/${defaultAppId}/appStoreVersions?`)) {
+    if (req.method === "GET" && req.url?.startsWith(`/v1/apps/${appId}/appStoreVersions?`)) {
       res.end(JSON.stringify({ data: [{ type: "appStoreVersions", id: "version-1", attributes: { versionString: "1.2.0", appStoreState: "PREPARE_FOR_SUBMISSION" } }] }));
       return;
     }
-    if (req.method === "GET" && req.url?.startsWith(`/v1/apps/${defaultAppId}/betaGroups?`)) {
+    if (req.method === "GET" && req.url?.startsWith(`/v1/apps/${appId}/betaGroups?`)) {
       res.end(JSON.stringify({ data: [{ type: "betaGroups", id: "group-1", attributes: { name: "Internal" } }] }));
       return;
     }
     if (req.method === "POST" && req.url === "/v1/betaGroups/group-1/relationships/builds") {
       assert.deepEqual(JSON.parse(body), { data: [{ type: "builds", id: "build-1" }] });
       res.writeHead(204).end();
+      return;
+    }
+    if (req.method === "GET" && req.url === `/v1/apps/${appId}/reviewSubmissions?filter%5Bplatform%5D=IOS`) {
+      res.end(JSON.stringify({ data: [{ type: "reviewSubmissions", id: "review-1" }] }));
+      return;
+    }
+    if (req.method === "POST" && req.url === "/v1/reviewSubmissions") {
+      assert.deepEqual(JSON.parse(body), {
+        data: { type: "reviewSubmissions", attributes: { platform: "IOS" }, relationships: { app: { data: { type: "apps", id: appId } } } },
+      });
+      res.end(JSON.stringify({ data: { type: "reviewSubmissions", id: "review-2" } }));
       return;
     }
     res.writeHead(404).end(JSON.stringify({ errors: [{ detail: "not found" }] }));
@@ -97,7 +108,9 @@ test("manifest declares bounded team credentials, Apple API access, and no host 
   const fields = Object.fromEntries(manifest.configuration.fields.map((field) => [field.id, field]));
   assert.equal(fields.privateKeyFile.type, "file");
   assert.equal(fields.privateKeyFile.validation.maxLength, 65_536);
-  assert.match(fields.issuerId.help, /Team Keys/);
+  assert.equal(fields.issuerId.required, false);
+  assert.equal(fields.defaultAppId, undefined);
+  assert.match(fields.issuerId.help, /Team ID is not used/);
 });
 
 test("rejects invalid private keys without exposing their contents", async () => {
@@ -107,7 +120,7 @@ test("rejects invalid private keys without exposing their contents", async () =>
       protocolVersion: 1,
       type: "input",
       operation: "configure",
-      package: { id: "app-store-connect", version: "0.1.0", dir: packageDir, home },
+      package: { id: "app-store-connect", version: "0.1.1", dir: packageDir, home },
       platform: { os: "darwin", arch: "arm64" },
       configuration: { issuerId, keyId, privateKeyFile: "-----BEGIN PRIVATE KEY-----\nsecret_invalid_key\n-----END PRIVATE KEY-----" },
     }, {});
@@ -122,7 +135,7 @@ test("rejects invalid private keys without exposing their contents", async () =>
 test("configures, verifies, inspects releases, and guards TestFlight changes without leaking the private key", async () => {
   const fake = await startAppleApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-app-store-connect-"));
-  const packageInfo = { id: "app-store-connect", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "app-store-connect", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", APP_STORE_CONNECT_TEST_API_URL: fake.url };
   try {
@@ -132,7 +145,7 @@ test("configures, verifies, inspects releases, and guards TestFlight changes wit
       operation: "configure",
       package: packageInfo,
       platform,
-      configuration: { issuerId, keyId, privateKeyFile: privateKeyPem, defaultAppId },
+      configuration: { issuerId, keyId, privateKeyFile: privateKeyPem },
     }, env);
     assert.equal(configured.code, 0, configured.stderr);
     assert.equal(configured.stderr, "");
@@ -167,11 +180,17 @@ test("configures, verifies, inspects releases, and guards TestFlight changes wit
         "list_app_store_versions",
         "list_beta_groups",
         "add_builds_to_beta_group",
+        "api_get",
+        "api_mutate",
       ]);
       await client.callTool({ name: "list_apps", arguments: { bundleId: "com.example.app" } });
-      await client.callTool({ name: "list_builds", arguments: {} });
-      await client.callTool({ name: "list_app_store_versions", arguments: {} });
-      await client.callTool({ name: "list_beta_groups", arguments: {} });
+      await client.callTool({ name: "list_builds", arguments: { appId } });
+      await client.callTool({ name: "list_app_store_versions", arguments: { appId } });
+      await client.callTool({ name: "list_beta_groups", arguments: { appId } });
+      await client.callTool({
+        name: "api_get",
+        arguments: { path: `/v1/apps/${appId}/reviewSubmissions`, query: { "filter[platform]": "IOS" } },
+      });
 
       const rejected = await client.callTool({
         name: "add_builds_to_beta_group",
@@ -180,16 +199,45 @@ test("configures, verifies, inspects releases, and guards TestFlight changes wit
       assert.equal(rejected.isError, true);
       assert.equal(fake.requests.filter((request) => request.method === "POST").length, 0);
 
+      const genericRejected = await client.callTool({
+        name: "api_mutate",
+        arguments: {
+          method: "POST",
+          path: "/v1/reviewSubmissions",
+          body: { data: { type: "reviewSubmissions" } },
+          confirmation: "wrong",
+        },
+      });
+      assert.equal(genericRejected.isError, true);
+      assert.equal(fake.requests.filter((request) => request.method === "POST").length, 0);
+
       const changed = await client.callTool({
         name: "add_builds_to_beta_group",
         arguments: { betaGroupId: "group-1", buildIds: ["build-1", "build-1"], confirmation: "CONFIRM_TESTFLIGHT_CHANGE" },
       });
       assert.equal(changed.isError, undefined);
+
+      const reviewCreated = await client.callTool({
+        name: "api_mutate",
+        arguments: {
+          method: "POST",
+          path: "/v1/reviewSubmissions",
+          body: {
+            data: {
+              type: "reviewSubmissions",
+              attributes: { platform: "IOS" },
+              relationships: { app: { data: { type: "apps", id: appId } } },
+            },
+          },
+          confirmation: "CONFIRM_APP_STORE_CONNECT_CHANGE",
+        },
+      });
+      assert.equal(reviewCreated.isError, undefined);
     } finally {
       await client.close();
     }
 
-    assert.equal(fake.requests.filter((request) => request.method === "POST").length, 1);
+    assert.equal(fake.requests.filter((request) => request.method === "POST").length, 2);
     assert.equal(JSON.stringify(fake.requests).includes(privateKeySecret), false);
   } finally {
     await fs.rm(home, { recursive: true, force: true });

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "app-store-connect",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -19,9 +19,9 @@
       {
         "id": "issuerId",
         "label": "Issuer ID",
-        "help": "In App Store Connect, open Users and Access > Integrations > App Store Connect API > Team Keys and copy the Issuer ID.",
+        "help": "Required for Team API keys. Leave empty for an Individual API key, which uses the fixed subject 'user'. Team ID is not used by the App Store Connect API.",
         "type": "text",
-        "required": true,
+        "required": false,
         "validation": { "pattern": "^[A-Za-z0-9-]{2,64}$", "maxLength": 64 }
       },
       {
@@ -39,14 +39,6 @@
         "type": "file",
         "required": true,
         "validation": { "maxLength": 65536 }
-      },
-      {
-        "id": "defaultAppId",
-        "label": "Default app resource ID",
-        "help": "Optional. Use list_apps to find the opaque App Store Connect resource ID. Tools can override this value.",
-        "type": "text",
-        "required": false,
-        "validation": { "pattern": "^[A-Za-z0-9.-]{1,128}$", "maxLength": 128 }
       }
     ],
     "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },

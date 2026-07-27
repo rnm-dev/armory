@@ -5,8 +5,9 @@ const API_URL = "https://api.appstoreconnect.apple.com";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 export class AppStoreConnectApiError extends Error {
-  constructor(readonly httpStatus: number) {
-    super(`App Store Connect API request failed (HTTP ${httpStatus})`);
+  constructor(readonly httpStatus: number, readonly apiCodes: string[] = []) {
+    const codes = apiCodes.length ? `: ${apiCodes.join(", ")}` : "";
+    super(`App Store Connect API request failed (HTTP ${httpStatus}${codes})`);
     this.name = "AppStoreConnectApiError";
   }
 }
@@ -36,7 +37,7 @@ export class AppStoreConnectClient {
     const expiresAt = now + 20 * 60;
     const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
     const unsigned = `${encode({ alg: "ES256", kid: this.config.keyId, typ: "JWT" })}.${encode({
-      iss: this.config.issuerId,
+      ...(this.config.issuerId ? { iss: this.config.issuerId } : { sub: "user" }),
       iat: now,
       exp: expiresAt,
       aud: "appstoreconnect-v1",
@@ -49,7 +50,7 @@ export class AppStoreConnectClient {
     return value;
   }
 
-  private async request(path: string, init: RequestInit = {}): Promise<unknown> {
+  async request(path: string, init: RequestInit = {}): Promise<unknown> {
     const response = await fetch(`${apiBase()}${path}`, {
       ...init,
       headers: {
@@ -64,19 +65,24 @@ export class AppStoreConnectClient {
     if (Buffer.byteLength(text) > MAX_RESPONSE_BYTES) {
       throw new Error("App Store Connect response exceeded 2 MiB; reduce the result limit");
     }
-    if (!response.ok) throw new AppStoreConnectApiError(response.status);
+    if (!response.ok) {
+      let apiCodes: string[] = [];
+      try {
+        const payload = JSON.parse(text) as { errors?: Array<{ code?: unknown }> };
+        apiCodes = [...new Set((payload.errors || [])
+          .map((error) => typeof error.code === "string" ? error.code : "")
+          .filter(Boolean))].slice(0, 5);
+      } catch {
+        // Apple occasionally returns a non-JSON gateway response. Never echo it.
+      }
+      throw new AppStoreConnectApiError(response.status, apiCodes);
+    }
     if (!text) return {};
     try {
       return JSON.parse(text);
     } catch {
       throw new Error("App Store Connect API returned an invalid response");
     }
-  }
-
-  appId(value?: string): string {
-    const appId = value || this.config.defaultAppId;
-    if (!appId) throw new Error("appId is required because no default app resource ID is configured");
-    return appId;
   }
 
   async listApps(limit: number, bundleId?: string): Promise<unknown> {
