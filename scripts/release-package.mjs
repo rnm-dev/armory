@@ -53,7 +53,7 @@ try {
 }
 
 const changed = run("git", ["status", "--porcelain"]).split("\n").filter(Boolean);
-if (changed.length !== 1 || changed[0] !== " M armory.json") {
+if (changed.length !== 1 || changed[0] !== "M armory.json") {
   throw new Error(`Publisher left unexpected working-tree changes: ${changed.join(", ") || "none"}`);
 }
 inherit("npm", ["run", "validate"]);
