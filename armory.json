@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-07-27T05:36:55.908Z",
+  "updatedAt": "2026-07-27T08:13:33.630Z",
   "packages": [
     {
       "id": "heroboard",
@@ -628,14 +628,14 @@
       "id": "app-store-connect",
       "displayName": "App Store Connect",
       "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/app-store-connect/assets/icon.png",
-      "summary": "Inspect App Store releases and safely manage TestFlight build access.",
+      "summary": "Automate TestFlight, App Store metadata, review, and release workflows.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/app-store-connect",
       "requirements": {
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.0",
+      "latest": "0.1.1",
       "versions": [
         {
           "version": "0.1.0",
@@ -662,6 +662,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/app-store-connect-v0.1.0/app-store-connect-0.1.0.tar.gz",
             "size": 429035,
             "sha256": "670c7768e4c4315c84eefc72ced8d6422622ab8b6887cfc2a55653deb2902034"
+          }
+        },
+        {
+          "version": "0.1.1",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/app-store-connect-v0.1.1/app-store-connect-0.1.1.tar.gz",
+            "size": 429682,
+            "sha256": "27f5d459d66f35a2ee8bdfe3f09d54b5d158d000a238b6bf4f5ccd2ccc82729b"
           }
         }
       ]
