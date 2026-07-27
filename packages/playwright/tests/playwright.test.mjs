@@ -32,11 +32,42 @@ async function startSite() {
 
 test("manifest limits browser access to local testing", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
+  const browserPaths = manifest.permissions.hostPaths.map(({ path: browserPath }) => browserPath);
   assert.deepEqual(manifest.permissions.networkHosts, ["localhost", "127.0.0.1"]);
   assert(manifest.permissions.hostPaths.every(({ mode }) => mode === "read"));
   assert.deepEqual(manifest.dependencies, []);
   assert(manifest.permissions.hostPaths.some(({ path: browserPath }) => browserPath.includes("Google Chrome")));
+  assert.deepEqual(browserPaths.filter((browserPath) => !browserPath.startsWith("/Applications/")), [
+    "/opt/google/chrome/chrome",
+    "/opt/google/chrome-beta/chrome",
+    "/opt/chromium.org/chromium/chrome",
+    "/usr/lib/chromium/chromium",
+    "/usr/lib/chromium-browser/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+  ]);
   assert.equal(manifest.mcp.toolPrefix, "playwright");
+});
+
+test("prefers real Linux browser binaries and contextualizes launch failures", async () => {
+  const source = await fs.readFile(path.join(packageDir, "src", "mcp.ts"), "utf8");
+  const expectedOrder = [
+    "/opt/google/chrome/chrome",
+    "/opt/google/chrome-beta/chrome",
+    "/opt/chromium.org/chromium/chrome",
+    "/usr/lib/chromium/chromium",
+    "/usr/lib/chromium-browser/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+  ];
+  let previousIndex = -1;
+  for (const browserPath of expectedOrder) {
+    const sourceIndex = source.indexOf(`"${browserPath}"`);
+    assert(sourceIndex > previousIndex, `${browserPath} must follow the previous browser candidate`);
+    previousIndex = sourceIndex;
+  }
+  assert.match(source, /env: browserEnvironment\(\)/);
+  assert.match(source, /Failed to launch Chrome or Chromium at/);
 });
 
 test("navigates, inspects, interacts with, and captures a local page", async () => {
@@ -45,7 +76,7 @@ test("navigates, inspects, interacts with, and captures a local page", async () 
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [path.join(packageDir, "dist", "mcp.js")],
-    env: { ...process.env, PEON_ARMORY_HOME: home },
+    env: { ...process.env, PATH: "/intentionally/minimal", PEON_ARMORY_HOME: home },
     stderr: "pipe",
   });
   const client = new Client({ name: "playwright-package-test", version: "1.0.0" });

@@ -10,7 +10,16 @@ const BROWSER_PATHS = process.platform === "darwin"
       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       "/Applications/Chromium.app/Contents/MacOS/Chromium",
     ]
-  : ["/usr/bin/google-chrome", "/usr/bin/chromium"];
+  : [
+      "/opt/google/chrome/chrome",
+      "/opt/google/chrome-beta/chrome",
+      "/opt/chromium.org/chromium/chrome",
+      "/usr/lib/chromium/chromium",
+      "/usr/lib/chromium-browser/chromium-browser",
+      "/usr/bin/google-chrome",
+      "/usr/bin/chromium",
+    ];
+const SYSTEM_PATH = "/usr/local/bin:/usr/bin:/bin";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
 function localUrl(value: string): URL {
@@ -28,6 +37,14 @@ async function browserExecutable(): Promise<string> {
   throw new Error(`Chrome or Chromium was not found; checked: ${BROWSER_PATHS.join(", ")}`);
 }
 
+function browserEnvironment(): Record<string, string> {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
+  env.PATH = [env.PATH, SYSTEM_PATH].filter(Boolean).join(":");
+  return env;
+}
+
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 
@@ -39,12 +56,22 @@ async function currentPage(): Promise<Page> {
   if (!context) {
     await fs.rm(profileDir, { recursive: true, force: true });
     await fs.mkdir(profileDir, { recursive: true, mode: 0o700 });
-    context = await chromium.launchPersistentContext(profileDir, {
-      executablePath: await browserExecutable(),
-      headless: true,
-      chromiumSandbox: false,
-      viewport: { width: 1280, height: 720 },
-    });
+    const executablePath = await browserExecutable();
+    try {
+      context = await chromium.launchPersistentContext(profileDir, {
+        executablePath,
+        env: browserEnvironment(),
+        headless: true,
+        chromiumSandbox: false,
+        viewport: { width: 1280, height: 720 },
+      });
+    } catch (error) {
+      const detail = error instanceof Error && error.message ? `: ${error.message}` : "";
+      throw new Error(
+        `Failed to launch Chrome or Chromium at ${executablePath}; verify that the executable and its helpers can run${detail}`,
+        { cause: error },
+      );
+    }
     await context.route("**/*", async (route) => {
       const url = route.request().url();
       if (url === "about:blank" || url.startsWith("data:")) return route.continue();
@@ -68,7 +95,7 @@ async function closeBrowser(): Promise<void> {
   await fs.rm(profileDir, { recursive: true, force: true });
 }
 
-const server = new McpServer({ name: "armory-playwright", version: "0.1.0" });
+const server = new McpServer({ name: "armory-playwright", version: "0.1.1" });
 
 server.registerTool("navigate", {
   description: "Navigate the browser to a localhost URL and wait for the DOM to be ready.",
