@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-play",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -23,14 +23,6 @@
         "type": "file",
         "required": true,
         "validation": { "maxLength": 1048576 }
-      },
-      {
-        "id": "packageName",
-        "label": "Default Android package name",
-        "help": "Enter the application ID from Play Console, for example com.example.app. Tools can override this for other apps available to the same service account.",
-        "type": "text",
-        "required": true,
-        "validation": { "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$", "maxLength": 255 }
       }
     ],
     "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
