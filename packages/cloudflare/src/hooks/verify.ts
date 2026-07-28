@@ -1,5 +1,6 @@
 import { CloudflareClient } from "../client.js";
-import { readConfig } from "../config.js";
+import { detectCapabilities } from "../capabilities.js";
+import { readConfig, writeConfig } from "../config.js";
 import { readInput, result } from "./protocol.js";
 
 try {
@@ -17,13 +18,15 @@ try {
       await client.request<{ status: string }>(`/accounts/${config.accountId}/tokens/verify`);
     }
   }
-  await Promise.all([
-    client.request(`/zones?account.id=${config.accountId}&page=1&per_page=5`),
-    client.request(`/accounts/${config.accountId}/cfd_tunnel?is_deleted=false&page=1&per_page=1`),
-    client.request(`/accounts/${config.accountId}/challenges/widgets?page=1&per_page=5`),
-    client.request(`/accounts/${config.accountId}/pages/projects?page=1&per_page=1`),
-  ]);
-  result({ ok: true, message: "Cloudflare connection verified" });
+  config.capabilities = await detectCapabilities(client, config);
+  await writeConfig(input.package.home, config);
+  const disabled = Object.entries(config.capabilities).filter(([, enabled]) => !enabled).map(([name]) => name);
+  result({
+    ok: true,
+    message: disabled.length === 0
+      ? "Cloudflare connection verified; all features enabled"
+      : `Cloudflare connection verified; unavailable features disabled: ${disabled.join(", ")}`,
+  });
 } catch {
   result({ ok: false, message: "Cloudflare connection could not be verified", errorCode: "VERIFICATION_FAILED" });
   process.exitCode = 1;

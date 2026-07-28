@@ -6,6 +6,23 @@ const DEFAULT_API_URL = "https://api.cloudflare.com/client/v4";
 export type CloudflareConfig = {
   apiToken: string;
   accountId: string;
+  capabilities: CloudflareCapabilities;
+};
+
+export type CloudflareCapabilities = {
+  zones: boolean;
+  dns: boolean;
+  tunnels: boolean;
+  turnstile: boolean;
+  pages: boolean;
+};
+
+export const disabledCapabilities: CloudflareCapabilities = {
+  zones: false,
+  dns: false,
+  tunnels: false,
+  turnstile: false,
+  pages: false,
 };
 
 export function apiUrl(): string {
@@ -24,5 +41,21 @@ export async function readConfig(home: string): Promise<CloudflareConfig> {
   if (typeof value.accountId !== "string" || !/^[0-9a-f]{32}$/i.test(value.accountId)) {
     throw new Error("Cloudflare account ID is not configured");
   }
-  return { apiToken: value.apiToken, accountId: value.accountId };
+  return {
+    apiToken: value.apiToken,
+    accountId: value.accountId,
+    capabilities: {
+      zones: value.capabilities?.zones === true,
+      dns: value.capabilities?.dns === true,
+      tunnels: value.capabilities?.tunnels === true,
+      turnstile: value.capabilities?.turnstile === true,
+      pages: value.capabilities?.pages === true,
+    },
+  };
+}
+
+export async function writeConfig(home: string, config: CloudflareConfig): Promise<void> {
+  const target = configPath(home);
+  await fs.mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+  await fs.writeFile(target, `${JSON.stringify(config)}\n`, { mode: 0o600 });
 }
