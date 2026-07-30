@@ -233,10 +233,35 @@ test("manifest declares scoped credential configuration and no host writes", asy
   assert.match(manifest.configuration.fields[1].help, /Copy account ID/);
 });
 
+test("starts with every tool when updating from a pre-capability configuration", async () => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-legacy-config-"));
+  await fs.mkdir(path.join(home, "config"), { recursive: true });
+  await fs.writeFile(path.join(home, "config", "cloudflare.json"), JSON.stringify({ apiToken, accountId }));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.join(packageDir, "dist", "mcp.js")],
+    env: { ...process.env, PEON_ARMORY_HOME: home },
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "cloudflare-legacy-config-test", version: "1.0.0" });
+  try {
+    await client.connect(transport);
+    const tools = (await client.listTools()).tools.map(({ name }) => name);
+    assert(tools.includes("list_zones"));
+    assert(tools.includes("list_dns_records"));
+    assert(tools.includes("list_tunnels"));
+    assert(tools.includes("list_turnstile_widgets"));
+    assert(tools.includes("deploy_pages_project"));
+  } finally {
+    await client.close();
+    await fs.rm(home, { recursive: true, force: true });
+  }
+});
+
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.2", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.3", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -271,7 +296,7 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
 test("disables and hides Pages tools when the token lacks Pages edit permission", async () => {
   const fake = await startCloudflare({ disabledCapabilities: ["pages"] });
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-limited-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.2", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.3", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -329,7 +354,7 @@ test("disables and hides Pages tools when the token lacks Pages edit permission"
 test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.2", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.3", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 

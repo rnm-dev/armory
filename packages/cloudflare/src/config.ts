@@ -25,6 +25,14 @@ export const disabledCapabilities: CloudflareCapabilities = {
   pages: false,
 };
 
+export const enabledCapabilities: CloudflareCapabilities = {
+  zones: true,
+  dns: true,
+  tunnels: true,
+  turnstile: true,
+  pages: true,
+};
+
 export function apiUrl(): string {
   return process.env.NODE_ENV === "test" && process.env.CLOUDFLARE_TEST_API_URL
     ? process.env.CLOUDFLARE_TEST_API_URL.replace(/\/$/, "")
@@ -41,16 +49,19 @@ export async function readConfig(home: string): Promise<CloudflareConfig> {
   if (typeof value.accountId !== "string" || !/^[0-9a-f]{32}$/i.test(value.accountId)) {
     throw new Error("Cloudflare account ID is not configured");
   }
+  const capabilities = value.capabilities === undefined
+    ? { ...enabledCapabilities }
+    : {
+      zones: value.capabilities.zones === true,
+      dns: value.capabilities.dns === true,
+      tunnels: value.capabilities.tunnels === true,
+      turnstile: value.capabilities.turnstile === true,
+      pages: value.capabilities.pages === true,
+    };
   return {
     apiToken: value.apiToken,
     accountId: value.accountId,
-    capabilities: {
-      zones: value.capabilities?.zones === true,
-      dns: value.capabilities?.dns === true,
-      tunnels: value.capabilities?.tunnels === true,
-      turnstile: value.capabilities?.turnstile === true,
-      pages: value.capabilities?.pages === true,
-    },
+    capabilities,
   };
 }
 
