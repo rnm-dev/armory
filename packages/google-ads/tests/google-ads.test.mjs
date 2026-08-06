@@ -93,6 +93,10 @@ test("manifest declares only Google Ads API and OAuth network access", async () 
     networkHosts: ["googleads.googleapis.com", "oauth2.googleapis.com"],
     hostPaths: [],
   });
+  assert.deepEqual(manifest.profile, {
+    type: "google-ads-api-credentials",
+    requiredFields: ["developerToken", "clientId", "clientSecret", "refreshToken"],
+  });
   assert.deepEqual(manifest.configuration.fields.map(({ id, type, required }) => ({ id, type, required })), [
     { id: "developerToken", type: "secret", required: true },
     { id: "clientId", type: "text", required: true },
@@ -111,7 +115,7 @@ test("manifest declares only Google Ads API and OAuth network access", async () 
 test("configures, verifies, and serves bounded read-only Google Ads tools without leaking secrets", async () => {
   const fake = await startGoogleAds();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-ads-"));
-  const packageInfo = { id: "google-ads", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "google-ads", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",

@@ -219,6 +219,10 @@ test("manifest declares scoped credential configuration and no host writes", asy
     mode: "read",
     purpose: "Read an operator-selected Pages build artifact, Pages Functions, and the project's local Wrangler compiler for direct upload.",
   }]);
+  assert.deepEqual(manifest.profile, {
+    type: "cloudflare-api-token",
+    requiredFields: ["apiToken", "accountId"],
+  });
   assert.deepEqual(manifest.configuration.fields.map(({ id, type, required }) => ({ id, type, required })), [
     { id: "apiToken", type: "secret", required: true },
     { id: "accountId", type: "text", required: true },

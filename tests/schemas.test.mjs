@@ -152,6 +152,11 @@ test("packages sharing a profile type keep shared field contracts compatible", (
 test("migrated official manifests declare deliberate reusable profile contracts", async () => {
   const expected = {
     "app-store-connect": { type: "app-store-connect-api-key", requiredFields: ["keyId", "privateKeyFile"] },
+    cloudflare: { type: "cloudflare-api-token", requiredFields: ["apiToken", "accountId"] },
+    "google-ads": {
+      type: "google-ads-api-credentials",
+      requiredFields: ["developerToken", "clientId", "clientSecret", "refreshToken"],
+    },
   };
 
   for (const [id, profile] of Object.entries(expected)) {
