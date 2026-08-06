@@ -157,6 +157,8 @@ test("migrated official manifests declare deliberate reusable profile contracts"
       type: "google-ads-api-credentials",
       requiredFields: ["developerToken", "clientId", "clientSecret", "refreshToken"],
     },
+    "google-analytics": { type: "google-oauth-credentials", requiredFields: ["credentialJson", "measurementRegion"] },
+    "google-tag-manager": { type: "google-oauth-credentials", requiredFields: ["credentialJson"] },
   };
 
   for (const [id, profile] of Object.entries(expected)) {

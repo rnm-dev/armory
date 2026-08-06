@@ -108,6 +108,10 @@ async function startGoogleApi() {
 test("manifest declares GTM endpoints, secret credentials, and no host writes", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   assert.equal(manifest.id, "google-tag-manager");
+  assert.deepEqual(manifest.profile, {
+    type: "google-oauth-credentials",
+    requiredFields: ["credentialJson"],
+  });
   assert.deepEqual(manifest.permissions.networkHosts, ["oauth2.googleapis.com", "tagmanager.googleapis.com"]);
   assert.deepEqual(manifest.permissions.hostPaths, []);
   const fields = Object.fromEntries(manifest.configuration.fields.map((field) => [field.id, field]));
@@ -121,7 +125,7 @@ test("manifest declares GTM endpoints, secret credentials, and no host writes", 
 test("configures, verifies, reads, versions, publishes, and guards generic mutations without leaking secrets", async () => {
   const fake = await startGoogleApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-tag-manager-"));
-  const packageInfo = { id: "google-tag-manager", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "google-tag-manager", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",

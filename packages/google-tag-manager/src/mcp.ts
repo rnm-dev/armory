@@ -8,7 +8,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new GoogleTagManagerClient(config);
-const server = new McpServer({ name: "armory-google-tag-manager", version: "0.1.0" });
+const server = new McpServer({ name: "armory-google-tag-manager", version: "0.1.1" });
 
 const resourceId = z.string().regex(/^[0-9]{1,32}$/);
 const accountId = resourceId.optional().describe("Numeric GTM account ID; uses the configured default when omitted");

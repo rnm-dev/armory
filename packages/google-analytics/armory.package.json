@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-analytics",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -22,6 +22,10 @@
     "hostPaths": []
   },
   "dependencies": [],
+  "profile": {
+    "type": "google-oauth-credentials",
+    "requiredFields": ["credentialJson", "measurementRegion"]
+  },
   "configuration": {
     "fields": [
       {

@@ -95,6 +95,10 @@ async function startGoogleApis() {
 test("manifest declares Google endpoints, secret credentials, and no host writes", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   assert.equal(manifest.id, "google-analytics");
+  assert.deepEqual(manifest.profile, {
+    type: "google-oauth-credentials",
+    requiredFields: ["credentialJson", "measurementRegion"],
+  });
   assert.deepEqual(manifest.permissions.hostPaths, []);
   assert(manifest.permissions.networkHosts.includes("analyticsdata.googleapis.com"));
   assert(manifest.permissions.networkHosts.includes("analyticsadmin.googleapis.com"));
@@ -114,7 +118,7 @@ test("manifest declares Google endpoints, secret credentials, and no host writes
 test("verification reports actionable failures without exposing Google response details", async () => {
   const fake = await startGoogleApis();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-analytics-errors-"));
-  const packageInfo = { id: "google-analytics", version: "0.1.1", dir: packageDir, home };
+  const packageInfo = { id: "google-analytics", version: "0.1.2", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
@@ -208,7 +212,7 @@ test("verification reports actionable failures without exposing Google response 
 test("configures, verifies, reports, administers, deletes, and measures without leaking secrets", async () => {
   const fake = await startGoogleApis();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-analytics-"));
-  const packageInfo = { id: "google-analytics", version: "0.1.1", dir: packageDir, home };
+  const packageInfo = { id: "google-analytics", version: "0.1.2", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
