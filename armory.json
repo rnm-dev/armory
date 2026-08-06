@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-06T12:58:29.910Z",
+  "updatedAt": "2026-08-06T12:58:57.359Z",
   "packages": [
     {
       "id": "heroboard",
@@ -14,7 +14,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "1.0.0",
+      "latest": "1.0.1",
       "versions": [
         {
           "version": "1.0.0",
@@ -41,6 +41,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/heroboard-v1.0.0/heroboard-1.0.0.tar.gz",
             "size": 124970,
             "sha256": "92db931440581a4370092dbc8c225962df93f25b9128734b4e0b606da106a3fd"
+          }
+        },
+        {
+          "version": "1.0.1",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/heroboard-v1.0.1/heroboard-1.0.1.tar.gz",
+            "size": 437648,
+            "sha256": "37d19abd6403674f79431359a4d4f8317eb8ccbb3f85df458a8db146ca400ff7"
           }
         }
       ]
