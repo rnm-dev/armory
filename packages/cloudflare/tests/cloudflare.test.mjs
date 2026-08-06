@@ -35,7 +35,7 @@ async function runHook(name, input, env) {
   return { code, stdout, stderr };
 }
 
-async function startCloudflare() {
+async function startCloudflare({ disabledCapabilities = [] } = {}) {
   const requests = [];
   const server = http.createServer(async (req, res) => {
     let body = "";
@@ -61,8 +61,20 @@ async function startCloudflare() {
       res.end(JSON.stringify({ success: true, result: { status: "active" } }));
       return;
     }
+    const capabilityProbe = (body === "{}" || body === '{"paused":"armory-permission-probe"}') && (
+      req.method === "PATCH" && /^\/zones\/[0-9a-f]{32}$/.test(req.url ?? "") ? "zones"
+        : req.method === "PATCH" && /^\/zones\/[0-9a-f]{32}\/dns_records\/[0-9a-f]{32}$/.test(req.url ?? "") ? "dns"
+          : req.method === "PATCH" && req.url?.startsWith(`/accounts/${accountId}/cfd_tunnel/`) ? "tunnels"
+            : req.method === "PUT" && req.url?.startsWith(`/accounts/${accountId}/challenges/widgets/`) ? "turnstile"
+              : req.method === "PATCH" && req.url?.startsWith(`/accounts/${accountId}/pages/projects/armory-permission-probe-`) ? "pages"
+                : undefined
+    );
+    if (capabilityProbe && disabledCapabilities.includes(capabilityProbe)) {
+      res.writeHead(403).end(JSON.stringify({ success: false, errors: [{ code: 10000, message: "authentication error" }] }));
+      return;
+    }
     if (req.url === `/zones?account.id=${accountId}&page=1&per_page=5`) {
-      res.end(JSON.stringify({ success: true, result: [] }));
+      res.end(JSON.stringify({ success: true, result: [{ id: zoneId, name: "example.com" }] }));
       return;
     }
     if (req.url === `/accounts/${accountId}/cfd_tunnel?is_deleted=false&page=1&per_page=1`) {
@@ -224,7 +236,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.1", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.2", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -256,10 +268,68 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
   }
 });
 
+test("disables and hides Pages tools when the token lacks Pages edit permission", async () => {
+  const fake = await startCloudflare({ disabledCapabilities: ["pages"] });
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-limited-token-"));
+  const packageInfo = { id: "cloudflare", version: "0.5.2", dir: packageDir, home };
+  const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
+  const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
+
+  try {
+    const configured = await runHook("configure", {
+      protocolVersion: 1,
+      type: "input",
+      operation: "configure",
+      package: packageInfo,
+      platform,
+      configuration: { apiToken, accountId },
+    }, env);
+    assert.equal(configured.code, 0, configured.stderr);
+
+    const verified = await runHook("verify", {
+      protocolVersion: 1,
+      type: "input",
+      operation: "verify",
+      package: packageInfo,
+      platform,
+    }, env);
+    assert.equal(verified.code, 0, verified.stderr);
+    assert.match(JSON.parse(verified.stdout).message, /unavailable features disabled: pages/);
+
+    const stored = JSON.parse(await fs.readFile(path.join(home, "config", "cloudflare.json"), "utf8"));
+    assert.deepEqual(stored.capabilities, {
+      zones: true,
+      dns: true,
+      tunnels: true,
+      turnstile: true,
+      pages: false,
+    });
+
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [path.join(packageDir, "dist", "mcp.js")],
+      env: { ...process.env, ...env, PEON_ARMORY_HOME: home },
+      stderr: "pipe",
+    });
+    const client = new Client({ name: "cloudflare-limited-token-test", version: "1.0.0" });
+    try {
+      await client.connect(transport);
+      const tools = (await client.listTools()).tools.map(({ name }) => name);
+      assert(tools.includes("list_zones"));
+      assert.equal(tools.some((name) => name.includes("pages")), false);
+    } finally {
+      await client.close();
+    }
+  } finally {
+    await fake.close();
+    await fs.rm(home, { recursive: true, force: true });
+  }
+});
+
 test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.1", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.5.2", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 

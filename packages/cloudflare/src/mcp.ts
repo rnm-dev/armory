@@ -9,7 +9,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.5.1" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.5.2" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");
@@ -30,6 +30,7 @@ function query(values: Record<string, string | number | boolean | undefined>): s
   return rendered ? `?${rendered}` : "";
 }
 
+if (config.capabilities.zones) {
 server.registerTool("list_zones", {
   description: "List Cloudflare DNS zones accessible to the configured API token.",
   inputSchema: {
@@ -75,7 +76,9 @@ server.registerTool("delete_zone", {
   description: "Permanently remove a DNS zone from Cloudflare.",
   inputSchema: { zoneId, confirm },
 }, async ({ zoneId }) => output(await api.request(`/zones/${encodeURIComponent(zoneId)}`, { method: "DELETE" })));
+}
 
+if (config.capabilities.dns) {
 server.registerTool("list_dns_records", {
   description: "List DNS records in a Cloudflare zone.",
   inputSchema: {
@@ -145,7 +148,9 @@ server.registerTool("delete_dns_record", {
   `/zones/${encodeURIComponent(zoneId)}/dns_records/${encodeURIComponent(recordId)}`,
   { method: "DELETE" },
 )));
+}
 
+if (config.capabilities.tunnels) {
 server.registerTool("list_tunnels", {
   description: "List active Cloudflare Tunnels in the configured account.",
   inputSchema: { name: z.string().max(100).optional() },
@@ -215,7 +220,9 @@ server.registerTool("put_tunnel_configuration", {
     } }),
   },
 )));
+}
 
+if (config.capabilities.turnstile) {
 const turnstileMode = z.enum(["non-interactive", "invisible", "managed"]);
 const turnstileClearanceLevel = z.enum(["no_clearance", "jschallenge", "managed", "interactive"]);
 const turnstileDomains = z.array(z.string().min(1).max(253)).max(10)
@@ -306,7 +313,9 @@ server.registerTool("delete_turnstile_widget", {
   `/accounts/${config.accountId}/challenges/widgets/${encodeURIComponent(sitekey)}`,
   { method: "DELETE" },
 )));
+}
 
+if (config.capabilities.pages) {
 const pagesProjectName = z.string().min(1).max(58).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/)
   .describe("Cloudflare Pages project name");
 const pagesEnvironment = z.enum(["production", "preview"]);
@@ -486,5 +495,6 @@ server.registerTool("get_pages_deployment_status", {
 
   return output(result);
 });
+}
 
 await server.connect(new StdioServerTransport());

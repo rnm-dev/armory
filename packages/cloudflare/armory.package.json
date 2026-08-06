@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cloudflare",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -20,6 +20,10 @@
     ]
   },
   "dependencies": [],
+  "profile": {
+    "type": "cloudflare-api-token",
+    "requiredFields": ["apiToken", "accountId"]
+  },
   "configuration": {
     "fields": [
       {

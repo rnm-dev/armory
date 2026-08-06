@@ -112,7 +112,7 @@ async function startGoogleApi() {
 test("manifest requests only a service-account file and the required API hosts", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   assert.deepEqual(manifest.configuration.fields, [{
-    id: "serviceAccountFile",
+    id: "serviceAccountJson",
     label: "Service account JSON",
     help: "In Google Cloud Console, go to IAM & Admin > Service Accounts, open or create an account, then choose Keys > Add key > Create new key > JSON. In each Search Console property, go to Settings > Users and permissions > Add user and grant access to the JSON file's client_email. Select that downloaded JSON file here.",
     type: "file",
@@ -143,7 +143,7 @@ test("configures, verifies, and serves the complete Search Console API without l
       operation: "configure",
       package: packageInfo,
       platform,
-      configuration: { serviceAccountFile: credentials },
+      configuration: { serviceAccountJson: credentials },
     }, env);
     assert.equal(configured.code, 0, configured.stderr);
     assert.equal(configured.stdout.includes(privateKeySecret), false);

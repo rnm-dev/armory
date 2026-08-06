@@ -64,9 +64,6 @@ async function startGoogleApi() {
       return;
     }
     const base = `/androidpublisher/v3/applications/${defaultPackage}`;
-    if (req.method === "GET" && req.url === `${base}/tracks/production/releases`) {
-      res.end(JSON.stringify({ releases: tracks.production.releases })); return;
-    }
     if (req.method === "POST" && req.url === `${base}/edits`) {
       res.end(JSON.stringify({ id: String(++nextEdit) })); return;
     }
@@ -104,18 +101,20 @@ test("manifest declares bounded credentials, API hosts, and no host writes", asy
   assert.deepEqual(manifest.permissions.hostPaths, []);
   assert.deepEqual(manifest.configuration.managedPaths, ["config/google-play.json"]);
   assert.equal(manifest.configuration.fields[0].type, "file");
+  assert.deepEqual(manifest.profile, { type: "google-service-account", requiredFields: ["serviceAccountJson"] });
+  assert.deepEqual(manifest.configuration.fields.map((field) => field.id), ["serviceAccountJson"]);
 });
 
 test("configures, verifies, inspects, and safely commits release changes without leaking secrets", async () => {
   const fake = await startGoogleApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-play-"));
-  const packageInfo = { id: "google-play", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "google-play", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", GOOGLE_PLAY_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_PLAY_TEST_API_URL: `${fake.url}/androidpublisher/v3` };
   try {
     const configured = await runHook("configure", {
       protocolVersion: 1, type: "input", operation: "configure", package: packageInfo, platform,
-      configuration: { serviceAccountFile: credentials, packageName: defaultPackage },
+      configuration: { serviceAccountJson: credentials },
     }, env);
     assert.equal(configured.code, 0, configured.stderr);
     assert.equal(configured.stdout.includes(privateKeySecret), false);
@@ -128,15 +127,15 @@ test("configures, verifies, inspects, and safely commits release changes without
     assert.equal(JSON.parse(verified.stdout).ok, true);
 
     const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(packageDir, "dist", "mcp.js")], env: { ...process.env, ...env, PEON_ARMORY_HOME: home } });
-    const client = new Client({ name: "google-play-package-test", version: "0.1.0" });
+    const client = new Client({ name: "google-play-package-test", version: "0.1.1" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();
       assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "promote_release", "update_rollout"]);
-      await client.callTool({ name: "list_releases", arguments: {} });
-      await client.callTool({ name: "list_tracks", arguments: {} });
-      await client.callTool({ name: "promote_release", arguments: { targetTrack: "beta", versionCodes: ["100"], name: "1.0 beta", status: "draft", confirmation: "CONFIRM_RELEASE_CHANGE" } });
-      await client.callTool({ name: "update_rollout", arguments: { track: "production", versionCode: "100", status: "completed", confirmation: "CONFIRM_RELEASE_CHANGE" } });
+      await client.callTool({ name: "list_releases", arguments: { packageName: defaultPackage } });
+      await client.callTool({ name: "list_tracks", arguments: { packageName: defaultPackage } });
+      await client.callTool({ name: "promote_release", arguments: { packageName: defaultPackage, targetTrack: "beta", versionCodes: ["100"], name: "1.0 beta", status: "draft", confirmation: "CONFIRM_RELEASE_CHANGE" } });
+      await client.callTool({ name: "update_rollout", arguments: { packageName: defaultPackage, track: "production", versionCode: "100", status: "completed", confirmation: "CONFIRM_RELEASE_CHANGE" } });
     } finally { await client.close(); }
 
     assert.equal(fake.tracks.beta.releases[0].status, "draft");
@@ -145,6 +144,7 @@ test("configures, verifies, inspects, and safely commits release changes without
     assert(fake.requests.some((request) => request.method === "DELETE"));
     assert.equal(fake.requests.filter((request) => request.url?.endsWith(":validate")).length, 2);
     assert.equal(fake.requests.filter((request) => request.url?.endsWith(":commit")).length, 2);
+    assert.equal(fake.requests.some((request) => request.url?.includes("/tracks/production/releases")), false);
     const serialized = JSON.stringify(fake.requests);
     assert.equal(serialized.includes(privateKeySecret), false);
     assert.equal(serialized.includes(accessToken), true);

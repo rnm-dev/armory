@@ -38,6 +38,22 @@ export class CloudflareClient {
     return envelope.result;
   }
 
+  async hasPermission(path: string, init: RequestInit): Promise<boolean> {
+    const response = await fetch(`${apiUrl()}${path}`, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${this.config.apiToken}`,
+        "content-type": "application/json",
+        ...init.headers,
+      },
+      signal: AbortSignal.timeout(30_000),
+    });
+    const envelope = await response.json().catch(() => undefined) as ApiEnvelope<unknown> | undefined;
+    const permissionDenied = response.status === 401 || response.status === 403
+      || envelope?.errors?.some(({ code }) => code === 9103 || code === 9109 || code === 10000);
+    return !permissionDenied && (response.ok || (response.status >= 400 && response.status < 500));
+  }
+
   async list<T>(path: string): Promise<T[]> {
     const results: T[] = [];
     for (let page = 1; page <= 100; page += 1) {

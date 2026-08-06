@@ -22,6 +22,10 @@
     "hostPaths": []
   },
   "dependencies": [],
+  "profile": {
+    "type": "google-credential-json",
+    "requiredFields": ["credentialJson", "measurementRegion"]
+  },
   "configuration": {
     "fields": [
       {

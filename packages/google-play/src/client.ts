@@ -66,10 +66,18 @@ export class GooglePlayClient {
     return body as T;
   }
 
-  packageName(value?: string): string { return value || this.config.packageName; }
+  async verifyCredentials(): Promise<void> {
+    await this.accessToken();
+  }
 
-  async listReleases(packageName: string, track: string): Promise<{ releases?: unknown[] }> {
-    return this.request(`/applications/${encodeURIComponent(packageName)}/tracks/${encodeURIComponent(track)}/releases`);
+  async listReleases(packageName: string, track: string): Promise<{ releases?: Release[] }> {
+    const editId = await this.createEdit(packageName);
+    try {
+      const result = await this.request<Track>(`${this.editPath(packageName, editId)}/tracks/${encodeURIComponent(track)}`);
+      return { releases: result.releases };
+    } finally {
+      await this.deleteEdit(packageName, editId);
+    }
   }
 
   private async createEdit(packageName: string): Promise<string> {

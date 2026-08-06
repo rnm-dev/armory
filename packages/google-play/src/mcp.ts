@@ -7,8 +7,8 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GooglePlayClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-play", version: "0.1.0" });
-const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255).optional();
+const server = new McpServer({ name: "armory-google-play", version: "0.1.1" });
+const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255);
 const track = z.string().min(1).max(255);
 const versionCode = z.string().regex(/^[1-9][0-9]*$/).max(20);
 const confirmation = z.literal("CONFIRM_RELEASE_CHANGE").describe("Exact confirmation required because this change can affect users");
@@ -17,12 +17,12 @@ const output = (value: unknown) => ({ content: [{ type: "text" as const, text: J
 server.registerTool("list_releases", {
   description: "List current non-obsolete releases and review lifecycle state for a Google Play track.",
   inputSchema: { packageName, track: track.default("production") },
-}, async ({ packageName, track }) => output(await api.listReleases(api.packageName(packageName), track)));
+}, async ({ packageName, track }) => output(await api.listReleases(packageName, track)));
 
 server.registerTool("list_tracks", {
   description: "List tracks and their active releases using a temporary read-only edit that is deleted afterward.",
   inputSchema: { packageName },
-}, async ({ packageName }) => output(await api.listTracks(api.packageName(packageName))));
+}, async ({ packageName }) => output(await api.listTracks(packageName)));
 
 server.registerTool("promote_release", {
   description: "Promote existing version codes to another track and commit the change. This affects app distribution and requires explicit confirmation.",
@@ -40,7 +40,7 @@ server.registerTool("promote_release", {
 }, async ({ packageName, targetTrack, versionCodes, name, status, userFraction, inAppUpdatePriority, releaseNotes }) => {
   if (status === "inProgress" && userFraction === undefined) throw new Error("userFraction is required for an in-progress release");
   if (status !== "inProgress" && userFraction !== undefined) throw new Error("userFraction is only valid for an in-progress release");
-  return output(await api.promoteRelease(api.packageName(packageName), targetTrack, {
+  return output(await api.promoteRelease(packageName, targetTrack, {
     versionCodes, status, ...(name ? { name } : {}), ...(userFraction !== undefined ? { userFraction } : {}),
     ...(inAppUpdatePriority !== undefined ? { inAppUpdatePriority } : {}), ...(releaseNotes ? { releaseNotes } : {}),
   }));
@@ -59,7 +59,7 @@ server.registerTool("update_rollout", {
     throw new Error("userFraction is required for an in-progress or halted rollout");
   }
   if (status === "completed" && userFraction !== undefined) throw new Error("userFraction is not valid for a completed rollout");
-  return output(await api.updateRelease(api.packageName(packageName), track, versionCode, { status, userFraction }));
+  return output(await api.updateRelease(packageName, track, versionCode, { status, userFraction }));
 });
 
 await server.connect(new StdioServerTransport());
