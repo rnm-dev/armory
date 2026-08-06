@@ -2,6 +2,8 @@
 
 export type Id = string;
 export type Semver = string;
+export type ProfileType = string;
+export type FieldId = string;
 export type Field = {
   [k: string]: any;
 } & {
@@ -51,7 +53,6 @@ export type Field = {
     maxLength?: number;
   };
 };
-export type FieldId = string;
 export type RelativePath = string;
 
 export interface ArmoryManifestV1 {
@@ -68,6 +69,7 @@ export interface ArmoryManifestV1 {
    * @maxItems 0
    */
   dependencies: [];
+  profile?: Profile;
   configuration?: Configuration;
   lifecycle?: Lifecycle;
   mcp: Mcp;
@@ -83,6 +85,13 @@ export interface Permissions {
     mode: "read" | "write";
     purpose: string;
   }[];
+}
+export interface Profile {
+  type: ProfileType;
+  /**
+   * @maxItems 64
+   */
+  requiredFields: FieldId[];
 }
 export interface Configuration {
   /**

@@ -39,6 +39,32 @@ credential or configuration file input, and `select` only with a non-empty
 specify `pattern` and `maxLength`. Legacy boolean sensitivity flags are invalid
 under strict V1 manifest validation; credential handling follows the field type.
 
+Credentialed packages also declare the reusable profile they accept at the
+top level of `armory.package.json`:
+
+```json
+"profile": {
+  "type": "google-service-account",
+  "requiredFields": ["serviceAccountJson"]
+}
+```
+
+Profile types are semantic compatibility identifiers matching
+`^[a-z][a-z0-9.-]{0,63}$`; they are chosen deliberately and are never inferred
+from package IDs. Packages that can share one credential record use the exact
+same profile type and the same field IDs for the same values. A shared field ID
+must keep a compatible field type, options, and validation rules in every
+package that uses it.
+
+`requiredFields` contains each configuration field whose `required` value is
+`true`, with no duplicates, and every entry must name a field declared in the
+same manifest. The field declarations remain the form and validation source;
+the profile declaration does not duplicate a field schema or contain values.
+Optional package settings remain configuration fields but are not profile
+assignment prerequisites. Credential-free packages omit `profile` entirely.
+Inventory, logs, errors, and documentation may expose only the profile type and
+field IDs, never submitted credential values or derived credential details.
+
 ## Local development
 
 Use locked dependencies and provide package-level `build` and `test` scripts. Then

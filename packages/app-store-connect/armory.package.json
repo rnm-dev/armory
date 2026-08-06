@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "app-store-connect",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -14,6 +14,10 @@
     "hostPaths": []
   },
   "dependencies": [],
+  "profile": {
+    "type": "app-store-connect-api-key",
+    "requiredFields": ["issuerId", "keyId", "privateKeyFile"]
+  },
   "configuration": {
     "fields": [
       {
