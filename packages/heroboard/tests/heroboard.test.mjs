@@ -55,7 +55,7 @@ async function startHeroboard() {
     if (req.url === "/api/mcp/mcp" && req.method === "POST") {
       let raw = "";
       for await (const chunk of req) raw += chunk;
-      const mcp = new McpServer({ name: "fake-heroboard", version: "1.0.0" });
+      const mcp = new McpServer({ name: "fake-heroboard", version: "1.0.1" });
       mcp.registerTool("list_projects", { description: "List accessible projects." }, async () => ({
         content: [{ type: "text", text: "[]" }],
       }));
@@ -85,7 +85,7 @@ async function startHeroboard() {
 test("configures, verifies, and proxies Heroboard MCP tools without leaking the API key", async () => {
   const fake = await startHeroboard();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-heroboard-"));
-  const packageInfo = { id: "heroboard", version: "1.0.0", dir: packageDir, home };
+  const packageInfo = { id: "heroboard", version: "1.0.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", HEROBOARD_TEST_API_URL: fake.url };
 
@@ -124,7 +124,7 @@ test("configures, verifies, and proxies Heroboard MCP tools without leaking the 
       args: [path.join(packageDir, "dist", "mcp.js")],
       env: { ...process.env, ...env, PEON_ARMORY_HOME: home },
     });
-    const client = new Client({ name: "heroboard-package-test", version: "1.0.0" });
+    const client = new Client({ name: "heroboard-package-test", version: "1.0.1" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();

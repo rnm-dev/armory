@@ -112,7 +112,7 @@ async function startGoogleApi() {
 test("manifest requests only a service-account file and the required API hosts", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   assert.deepEqual(manifest.configuration.fields, [{
-    id: "serviceAccountFile",
+    id: "serviceAccountJson",
     label: "Service account JSON",
     help: "In Google Cloud Console, go to IAM & Admin > Service Accounts, open or create an account, then choose Keys > Add key > Create new key > JSON. In each Search Console property, go to Settings > Users and permissions > Add user and grant access to the JSON file's client_email. Select that downloaded JSON file here.",
     type: "file",
@@ -127,7 +127,7 @@ test("manifest requests only a service-account file and the required API hosts",
 test("configures, verifies, and serves the complete Search Console API without leaking credentials", async () => {
   const fake = await startGoogleApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-search-console-"));
-  const packageInfo = { id: "google-search-console", version: "0.2.0", dir: packageDir, home };
+  const packageInfo = { id: "google-search-console", version: "0.2.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
@@ -143,7 +143,7 @@ test("configures, verifies, and serves the complete Search Console API without l
       operation: "configure",
       package: packageInfo,
       platform,
-      configuration: { serviceAccountFile: credentials },
+      configuration: { serviceAccountJson: credentials },
     }, env);
     assert.equal(configured.code, 0, configured.stderr);
     assert.equal(configured.stdout.includes(privateKeySecret), false);
@@ -174,7 +174,7 @@ test("configures, verifies, and serves the complete Search Console API without l
       args: [path.join(packageDir, "dist", "mcp.js")],
       env: { ...process.env, ...env, PEON_ARMORY_HOME: home },
     });
-    const client = new Client({ name: "google-search-console-package-test", version: "0.2.0" });
+    const client = new Client({ name: "google-search-console-package-test", version: "0.2.1" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();

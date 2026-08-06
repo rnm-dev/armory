@@ -7,7 +7,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GeminiImageClient(await readConfig(home));
-const server = new McpServer({ name: "armory-image-generator", version: "0.2.0" });
+const server = new McpServer({ name: "armory-image-generator", version: "0.2.1" });
 
 server.registerTool("gemini_image", {
   description: "Generate one or more images with a selectable Gemini-native image model. Defaults to the balanced Gemini 3.1 Flash Image model, square 1K PNG output, one image, and no Search grounding.",

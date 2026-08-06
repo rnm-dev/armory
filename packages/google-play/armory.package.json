@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-play",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -14,10 +14,14 @@
     "hostPaths": []
   },
   "dependencies": [],
+  "profile": {
+    "type": "google-service-account",
+    "requiredFields": ["serviceAccountJson"]
+  },
   "configuration": {
     "fields": [
       {
-        "id": "serviceAccountFile",
+        "id": "serviceAccountJson",
         "label": "Service account JSON",
         "help": "In Google Cloud Console, enable the Google Play Android Developer API and create a service account key in JSON format. In Play Console, grant that service account access to the app and the release permissions you want Peon to use, then select the downloaded JSON file here.",
         "type": "file",

@@ -7,7 +7,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new SearchConsoleClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-search-console", version: "0.2.0" });
+const server = new McpServer({ name: "armory-google-search-console", version: "0.2.1" });
 
 const siteUrl = z.string().min(1).max(2048).describe("Search Console property URL, such as https://example.com/ or sc-domain:example.com");
 const absoluteUrl = z.string().url().max(4096);

@@ -91,7 +91,7 @@ test("manifest declares one protected Gemini credential and only the Gemini API 
 test("configures, verifies, and generates images without leaking the API key", async () => {
   const fake = await startGeminiApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-image-generator-"));
-  const packageInfo = { id: "image-generator", version: "0.2.0", dir: packageDir, home };
+  const packageInfo = { id: "image-generator", version: "0.2.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", IMAGE_GENERATOR_TEST_API_URL: fake.url };
 
@@ -137,7 +137,7 @@ test("configures, verifies, and generates images without leaking the API key", a
       args: [path.join(packageDir, "dist", "mcp.js")],
       env: { ...process.env, ...env, PEON_ARMORY_HOME: home },
     });
-    const client = new Client({ name: "image-generator-package-test", version: "0.2.0" });
+    const client = new Client({ name: "image-generator-package-test", version: "0.2.1" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();
@@ -196,7 +196,7 @@ test("rejects incompatible model settings before making a billable request", asy
   await fs.writeFile(path.join(home, "config", "image-generator.json"), JSON.stringify({ apiKey }), { mode: 0o600 });
   const env = { ...process.env, NODE_ENV: "test", IMAGE_GENERATOR_TEST_API_URL: fake.url, PEON_ARMORY_HOME: home };
   const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(packageDir, "dist", "mcp.js")], env });
-  const client = new Client({ name: "image-generator-validation-test", version: "0.2.0" });
+  const client = new Client({ name: "image-generator-validation-test", version: "0.2.1" });
   try {
     await client.connect(transport);
     const result = await client.callTool({

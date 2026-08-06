@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-search-console",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -14,10 +14,14 @@
     "hostPaths": []
   },
   "dependencies": [],
+  "profile": {
+    "type": "google-service-account",
+    "requiredFields": ["serviceAccountJson"]
+  },
   "configuration": {
     "fields": [
       {
-        "id": "serviceAccountFile",
+        "id": "serviceAccountJson",
         "label": "Service account JSON",
         "help": "In Google Cloud Console, go to IAM & Admin > Service Accounts, open or create an account, then choose Keys > Add key > Create new key > JSON. In each Search Console property, go to Settings > Users and permissions > Add user and grant access to the JSON file's client_email. Select that downloaded JSON file here.",
         "type": "file",

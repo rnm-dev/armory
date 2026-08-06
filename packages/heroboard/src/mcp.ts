@@ -9,13 +9,13 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const { apiKey } = await readConfig(home);
 
-const remote = new Client({ name: "armory-heroboard", version: "1.0.0" });
+const remote = new Client({ name: "armory-heroboard", version: "1.0.1" });
 await remote.connect(new StreamableHTTPClientTransport(new URL(`${apiUrl()}/api/mcp/mcp`), {
   requestInit: { headers: { "X-Api-Key": apiKey } },
 }));
 
 const server = new Server(
-  { name: "armory-heroboard", version: "1.0.0" },
+  { name: "armory-heroboard", version: "1.0.1" },
   { capabilities: { tools: {} } },
 );
 

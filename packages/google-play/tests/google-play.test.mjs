@@ -101,19 +101,19 @@ test("manifest declares bounded credentials, API hosts, and no host writes", asy
   assert.deepEqual(manifest.permissions.hostPaths, []);
   assert.deepEqual(manifest.configuration.managedPaths, ["config/google-play.json"]);
   assert.equal(manifest.configuration.fields[0].type, "file");
-  assert.deepEqual(manifest.configuration.fields.map((field) => field.id), ["serviceAccountFile"]);
+  assert.deepEqual(manifest.configuration.fields.map((field) => field.id), ["serviceAccountJson"]);
 });
 
 test("configures, verifies, inspects, and safely commits release changes without leaking secrets", async () => {
   const fake = await startGoogleApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-play-"));
-  const packageInfo = { id: "google-play", version: "0.1.1", dir: packageDir, home };
+  const packageInfo = { id: "google-play", version: "0.1.2", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", GOOGLE_PLAY_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_PLAY_TEST_API_URL: `${fake.url}/androidpublisher/v3` };
   try {
     const configured = await runHook("configure", {
       protocolVersion: 1, type: "input", operation: "configure", package: packageInfo, platform,
-      configuration: { serviceAccountFile: credentials },
+      configuration: { serviceAccountJson: credentials },
     }, env);
     assert.equal(configured.code, 0, configured.stderr);
     assert.equal(configured.stdout.includes(privateKeySecret), false);
@@ -126,7 +126,7 @@ test("configures, verifies, inspects, and safely commits release changes without
     assert.equal(JSON.parse(verified.stdout).ok, true);
 
     const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(packageDir, "dist", "mcp.js")], env: { ...process.env, ...env, PEON_ARMORY_HOME: home } });
-    const client = new Client({ name: "google-play-package-test", version: "0.1.1" });
+    const client = new Client({ name: "google-play-package-test", version: "0.1.2" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();

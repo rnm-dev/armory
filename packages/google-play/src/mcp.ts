@@ -7,7 +7,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GooglePlayClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-play", version: "0.1.1" });
+const server = new McpServer({ name: "armory-google-play", version: "0.1.2" });
 const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255);
 const track = z.string().min(1).max(255);
 const versionCode = z.string().regex(/^[1-9][0-9]*$/).max(20);

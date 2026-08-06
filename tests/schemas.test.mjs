@@ -159,6 +159,10 @@ test("migrated official manifests declare deliberate reusable profile contracts"
     },
     "google-analytics": { type: "google-oauth-credentials", requiredFields: ["credentialJson", "measurementRegion"] },
     "google-tag-manager": { type: "google-oauth-credentials", requiredFields: ["credentialJson"] },
+    "google-play": { type: "google-service-account", requiredFields: ["serviceAccountJson"] },
+    "google-search-console": { type: "google-service-account", requiredFields: ["serviceAccountJson"] },
+    "heroboard": { type: "heroboard-api-key", requiredFields: ["apiKey"] },
+    "image-generator": { type: "gemini-api-key", requiredFields: ["apiKey"] },
   };
 
   for (const [id, profile] of Object.entries(expected)) {

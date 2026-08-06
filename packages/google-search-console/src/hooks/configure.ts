@@ -5,7 +5,7 @@ import { readInput, result } from "./protocol.js";
 
 try {
   const input = await readInput();
-  const raw = input.configuration?.serviceAccountFile;
+  const raw = input.configuration?.serviceAccountJson;
   if (input.operation !== "configure" || typeof raw !== "string" || Buffer.byteLength(raw) > 1024 * 1024) {
     throw new Error("invalid Google Search Console configuration");
   }
