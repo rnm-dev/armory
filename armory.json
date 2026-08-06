@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-06T12:57:32.051Z",
+  "updatedAt": "2026-08-06T12:58:01.078Z",
   "packages": [
     {
       "id": "heroboard",
@@ -728,7 +728,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.1",
+      "latest": "0.1.2",
       "versions": [
         {
           "version": "0.1.0",
@@ -782,6 +782,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-play-v0.1.1/google-play-0.1.1.tar.gz",
             "size": 267127,
             "sha256": "2ca6d60b5c5cbad07aaed05ad8f3089bfc6e6cf8afa1eb636603b162ba2bb350"
+          }
+        },
+        {
+          "version": "0.1.2",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-play-v0.1.2/google-play-0.1.2.tar.gz",
+            "size": 267374,
+            "sha256": "b8f7089b18f3dffd79df4e727d230f6f782b83c6aca7ad20c6dfb1b8924bca1a"
           }
         }
       ]
