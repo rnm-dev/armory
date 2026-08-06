@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-06T12:58:01.078Z",
+  "updatedAt": "2026-08-06T12:58:29.910Z",
   "packages": [
     {
       "id": "heroboard",
@@ -452,7 +452,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.2.0",
+      "latest": "0.2.1",
       "versions": [
         {
           "version": "0.1.0",
@@ -506,6 +506,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-search-console-v0.2.0/google-search-console-0.2.0.tar.gz",
             "size": 471798,
             "sha256": "8aa563069bf957176c600cd29a143edc446d2a7db8ffcbf6bff7c5ae591640dc"
+          }
+        },
+        {
+          "version": "0.2.1",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-search-console-v0.2.1/google-search-console-0.2.1.tar.gz",
+            "size": 472190,
+            "sha256": "b893315e58113073f44e39d6e35c7ade124f52b48c89a4777aa03c8e52858ed5"
           }
         }
       ]
