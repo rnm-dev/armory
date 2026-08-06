@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import semver from "semver";
-import { formatAjvErrors, loadValidators, readJson, repoRoot, summarizeRequirements } from "./schema-utils.mjs";
+import { formatAjvErrors, loadValidators, profileDeclarationErrors, profileTypeCompatibilityErrors, readJson, repoRoot, summarizeRequirements } from "./schema-utils.mjs";
 
 const OFFICIAL_RELEASE_PREFIX = "/rnm-dev/armory/releases/download/";
 const iconUrl = (id) => `https://raw.githubusercontent.com/rnm-dev/armory/main/packages/${id}/assets/icon.png`;
@@ -56,6 +56,7 @@ function validateManifestSemantics(manifest, where) {
   unique(manifest.platforms.map(key), `${where}.platforms`);
   unique(manifest.permissions.networkHosts, `${where}.permissions.networkHosts`);
   unique(manifest.permissions.hostPaths.map((entry) => `${entry.mode}:${entry.path}`), `${where}.permissions.hostPaths`);
+  for (const message of profileDeclarationErrors(manifest)) fail(`${where}.profile`, message);
 
   if (manifest.configuration) {
     unique(manifest.configuration.fields.map((field) => field.id), `${where}.configuration.fields`);
@@ -104,6 +105,7 @@ if (catalog && validators.catalog(catalog)) {
 const packageRoot = path.join(repoRoot, "packages");
 const packageDirs = (await fs.readdir(packageRoot, { withFileTypes: true }).catch(() => []))
   .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."));
+const packageManifests = [];
 
 for (const dirent of packageDirs) {
   const manifestPath = path.join(packageRoot, dirent.name, "armory.package.json");
@@ -120,6 +122,7 @@ for (const dirent of packageDirs) {
   }
   if (manifest.id !== dirent.name) fail(`packages/${dirent.name}`, `manifest id ${manifest.id} does not match directory`);
   validateManifestSemantics(manifest, `packages/${dirent.name}`);
+  packageManifests.push({ manifest, where: `packages/${dirent.name}` });
   const metadataPath = path.join(packageRoot, dirent.name, "catalog.package.json");
   try {
     const metadata = await readJson(metadataPath);
@@ -150,6 +153,8 @@ for (const dirent of packageDirs) {
     if (JSON.stringify(expectedRequirements) !== JSON.stringify(catalogEntry.requirements)) fail(`packages/${dirent.name}`, "catalog requirements do not summarize manifest");
   }
 }
+
+for (const message of profileTypeCompatibilityErrors(packageManifests)) fail("profile compatibility", message);
 
 const hookFixtureRoot = path.join(repoRoot, "tests", "fixtures", "hooks", "valid");
 for (const entry of await fs.readdir(hookFixtureRoot, { withFileTypes: true }).catch(() => [])) {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import test from "node:test";
-import { loadValidators, summarizeRequirements } from "../scripts/schema-utils.mjs";
+import { loadValidators, profileDeclarationErrors, profileTypeCompatibilityErrors, readJson, repoRoot, summarizeRequirements } from "../scripts/schema-utils.mjs";
 
 const validators = await loadValidators();
 
@@ -60,6 +61,107 @@ test("minimal package manifest is valid", () => {
     dependencies: [],
     mcp: { command: { executable: "node", args: ["dist/mcp.js"] }, toolPrefix: "fixture_echo" },
   }), true);
+});
+
+test("profile declarations use the settled bounded contract", () => {
+  const manifest = {
+    schemaVersion: 1,
+    id: "fixture-profile",
+    version: "1.0.0",
+    minPeonVersion: "0.0.1",
+    platforms: [{ os: "linux", arch: "x64" }],
+    permissions: { networkHosts: [], hostPaths: [] },
+    dependencies: [],
+    profile: { type: "google-service-account", requiredFields: ["serviceAccountJson"] },
+    configuration: {
+      fields: [{ id: "serviceAccountJson", label: "Service account JSON", type: "file", required: true }],
+      handler: { executable: "node", args: ["dist/hooks/configure.js"] },
+      managedPaths: [],
+    },
+    mcp: { command: { executable: "node", args: ["dist/mcp.js"] }, toolPrefix: "fixture_profile" },
+  };
+
+  assert.equal(validators.manifest(manifest), true);
+  assert.equal(validators.manifest({
+    ...manifest,
+    profile: { ...manifest.profile, type: "Google_Service_Account" },
+  }), false, "profile types must use the lowercase bounded syntax");
+  assert.equal(validators.manifest({
+    ...manifest,
+    profile: { ...manifest.profile, type: `a${"b".repeat(64)}` },
+  }), false, "profile types cannot exceed 64 characters");
+  assert.equal(validators.manifest({
+    ...manifest,
+    profile: { ...manifest.profile, requiredFields: ["serviceAccountJson", "serviceAccountJson"] },
+  }), false, "required profile fields must be unique");
+  assert.equal(validators.manifest({
+    ...manifest,
+    profile: { ...manifest.profile, requiredFields: Array.from({ length: 65 }, (_, index) => `field${index}`) },
+  }), false, "profile declarations cannot require more than 64 fields");
+});
+
+test("profile declaration semantics permit gradual rollout and reject incompatible fields", () => {
+  const configured = {
+    permissions: { hostPaths: [] },
+    profile: { type: "example-credentials", requiredFields: ["apiKey"] },
+    configuration: {
+      fields: [
+        { id: "apiKey", type: "secret", required: true },
+        { id: "region", type: "select", required: false },
+      ],
+    },
+  };
+
+  assert.deepEqual(profileDeclarationErrors(configured), []);
+  assert.deepEqual(profileDeclarationErrors({ ...configured, profile: undefined }), []);
+  assert.match(profileDeclarationErrors({
+    ...configured,
+    profile: { ...configured.profile, requiredFields: ["missing"] },
+  }).join("\n"), /undeclared field "missing"/);
+  assert.match(profileDeclarationErrors({
+    ...configured,
+    profile: { ...configured.profile, requiredFields: ["apiKey", "region"] },
+  }).join("\n"), /optional field "region"/);
+  assert.match(profileDeclarationErrors({
+    ...configured,
+    configuration: { fields: [...configured.configuration.fields, { id: "tenant", type: "text", required: true }] },
+  }).join("\n"), /omits required configuration field "tenant"/);
+  assert.match(profileDeclarationErrors({
+    permissions: { hostPaths: [] },
+    profile: { type: "fake-profile", requiredFields: [] },
+  }).join("\n"), /credential-free packages must omit profile/);
+});
+
+test("packages sharing a profile type keep shared field contracts compatible", () => {
+  const manifest = (id, field) => ({
+    id,
+    profile: { type: "shared-credentials", requiredFields: [field.id] },
+    configuration: { fields: [field] },
+  });
+  const compatible = [
+    { manifest: manifest("first", { id: "apiKey", type: "secret", required: true, validation: { maxLength: 4096 } }), where: "first" },
+    { manifest: manifest("second", { id: "apiKey", type: "secret", required: true, validation: { maxLength: 4096 } }), where: "second" },
+  ];
+  assert.deepEqual(profileTypeCompatibilityErrors(compatible), []);
+  assert.match(profileTypeCompatibilityErrors([
+    compatible[0],
+    { manifest: manifest("second", { id: "apiKey", type: "text", required: true, validation: { maxLength: 4096 } }), where: "second" },
+  ])[0], /incompatible.*shared profile type/);
+});
+
+test("migrated official manifests declare deliberate reusable profile contracts", async () => {
+  const expected = {
+    "app-store-connect": { type: "app-store-connect-api-key", requiredFields: ["keyId", "privateKeyFile"] },
+  };
+
+  for (const [id, profile] of Object.entries(expected)) {
+    const manifest = await readJson(path.join(repoRoot, "packages", id, "armory.package.json"));
+    assert.deepEqual(manifest.profile, profile, `${id} must expose its intentional profile contract`);
+  }
+  for (const id of ["fixture-echo", "playwright"]) {
+    const manifest = await readJson(path.join(repoRoot, "packages", id, "armory.package.json"));
+    assert.equal("profile" in manifest, false, `${id} must remain credential-free`);
+  }
 });
 
 test("configuration fields use type-driven credential handling", () => {

@@ -13,6 +13,7 @@
     "platforms": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/platform" } },
     "permissions": { "$ref": "#/$defs/permissions" },
     "dependencies": { "type": "array", "maxItems": 0 },
+    "profile": { "$ref": "#/$defs/profile" },
     "configuration": { "$ref": "#/$defs/configuration" },
     "lifecycle": { "$ref": "#/$defs/lifecycle" },
     "mcp": { "$ref": "#/$defs/mcp" }
@@ -20,6 +21,7 @@
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
     "fieldId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,62}$" },
+    "profileType": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" },
     "semver": { "type": "string", "format": "semver" },
     "relativePath": {
       "type": "string",
@@ -116,6 +118,20 @@
       "allOf": [
         { "if": { "properties": { "type": { "const": "select" } } }, "then": { "required": ["options"] }, "else": { "not": { "required": ["options"] } } }
       ]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requiredFields"],
+      "properties": {
+        "type": { "$ref": "#/$defs/profileType" },
+        "requiredFields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fieldId" },
+          "uniqueItems": true,
+          "maxItems": 64
+        }
+      }
     },
     "configuration": {
       "type": "object",
