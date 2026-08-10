@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-06T12:59:25.892Z",
+  "updatedAt": "2026-08-10T07:48:03.888Z",
   "packages": [
     {
       "id": "heroboard",
@@ -802,14 +802,14 @@
       "id": "google-play",
       "displayName": "Google Play",
       "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-play/assets/icon.png",
-      "summary": "Inspect Google Play releases and safely manage promotions and staged rollouts.",
+      "summary": "Manage Google Play releases, listings, screenshots, Data Safety, and regional price previews.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-play",
       "requirements": {
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.2",
+      "latest": "0.2.0",
       "versions": [
         {
           "version": "0.1.0",
@@ -890,6 +890,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-play-v0.1.2/google-play-0.1.2.tar.gz",
             "size": 267374,
             "sha256": "b8f7089b18f3dffd79df4e727d230f6f782b83c6aca7ad20c6dfb1b8924bca1a"
+          }
+        },
+        {
+          "version": "0.2.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-play-v0.2.0/google-play-0.2.0.tar.gz",
+            "size": 269235,
+            "sha256": "b89dfcacd9266929a8801015b809584d1214d84c441bc2171d236db95a4f6d4e"
           }
         }
       ]
