@@ -1,5 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { z } from "zod";
 import { GooglePlayClient } from "./client.js";
 import { readConfig } from "./config.js";
@@ -7,7 +10,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GooglePlayClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-play", version: "0.2.0" });
+const server = new McpServer({ name: "armory-google-play", version: "0.3.0" });
 const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255);
 const track = z.string().min(1).max(255);
 const versionCode = z.string().regex(/^[1-9][0-9]*$/).max(20);
@@ -16,6 +19,22 @@ const publishConfirmation = z.literal("CONFIRM_PLAY_CONSOLE_CHANGE").describe("E
 const language = z.string().regex(/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/).max(35);
 const imageType = z.enum(["phoneScreenshots", "sevenInchScreenshots", "tenInchScreenshots", "tvScreenshots", "wearScreenshots", "icon", "featureGraphic", "tvBanner"]);
 const output = (value: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] });
+const projectsRoot = process.env.NODE_ENV === "test" && process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT
+  ? process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT : path.join(os.homedir(), "Projects");
+
+async function projectFile(filePath: string, extension: RegExp, maxBytes: number, label: string): Promise<{ path: string; size: number }> {
+  if (!path.isAbsolute(filePath)) throw new Error(`${label} path must be absolute and under ~/Projects`);
+  const root = await fs.realpath(projectsRoot).catch(() => undefined);
+  const candidate = await fs.realpath(filePath).catch(() => undefined);
+  if (!root || !candidate) throw new Error(`${label} file does not exist`);
+  const relative = path.relative(root, candidate);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) throw new Error(`${label} path must stay under ~/Projects`);
+  const original = await fs.lstat(filePath);
+  const details = await fs.stat(candidate);
+  if (original.isSymbolicLink() || !details.isFile()) throw new Error(`${label} must be a regular file, not a symbolic link`);
+  if (!extension.test(path.extname(candidate)) || details.size < 1 || details.size > maxBytes) throw new Error(`${label} has an invalid extension or size`);
+  return { path: candidate, size: details.size };
+}
 
 server.registerTool("list_releases", {
   description: "List current non-obsolete releases and review lifecycle state for a Google Play track.",
@@ -52,14 +71,24 @@ server.registerTool("list_images", {
 }, async ({ packageName, language, imageType }) => output(await api.listImages(packageName, language, imageType)));
 
 server.registerTool("upload_image", {
-  description: "Upload and publish a base64-encoded screenshot or store graphic. Requires explicit confirmation.",
-  inputSchema: { packageName, language, imageType, contentType: z.enum(["image/png", "image/jpeg"]),
-    imageBase64: z.string().min(4).max(20_971_520), aiGeneratedState: z.enum(["aiGeneratedStateNotAiGenerated", "aiGeneratedStateAiGeneratedDeveloperAttested"]).optional(),
+  description: "Upload and publish a PNG or JPEG screenshot/store graphic from an absolute file path under ~/Projects. Requires explicit confirmation.",
+  inputSchema: { packageName, language, imageType, filePath: z.string().min(1).max(4096),
+    aiGeneratedState: z.enum(["aiGeneratedStateNotAiGenerated", "aiGeneratedStateAiGeneratedDeveloperAttested"]).optional(),
     confirmation: publishConfirmation },
-}, async ({ packageName, language, imageType, contentType, imageBase64, aiGeneratedState }) => {
-  const bytes = Buffer.from(imageBase64, "base64");
-  if (bytes.length === 0 || bytes.length > 15_728_640 || bytes.toString("base64").replace(/=+$/, "") !== imageBase64.replace(/=+$/, "")) throw new Error("imageBase64 must be valid base64 encoding at most 15 MiB");
+}, async ({ packageName, language, imageType, filePath, aiGeneratedState }) => {
+  const image = await projectFile(filePath, /^\.(?:png|jpe?g)$/i, 15_728_640, "image");
+  const contentType = /\.png$/i.test(image.path) ? "image/png" : "image/jpeg";
+  const bytes = await fs.readFile(image.path);
   return output(await api.uploadImage(packageName, language, imageType, contentType, bytes, aiGeneratedState));
+});
+
+server.registerTool("upload_bundle", {
+  description: "Stream an Android App Bundle from an absolute .aab file path under ~/Projects, validate the edit, and commit it. Requires explicit confirmation.",
+  inputSchema: { packageName, filePath: z.string().min(1).max(4096),
+    deviceTierConfigId: z.string().min(1).max(100).optional(), confirmation: publishConfirmation },
+}, async ({ packageName, filePath, deviceTierConfigId }) => {
+  const bundle = await projectFile(filePath, /^\.aab$/i, 53_687_091_200, "Android App Bundle");
+  return output(await api.uploadBundle(packageName, bundle.path, deviceTierConfigId));
 });
 
 server.registerTool("delete_image", {

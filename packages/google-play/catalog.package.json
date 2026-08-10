@@ -2,7 +2,7 @@
   "id": "google-play",
   "displayName": "Google Play",
   "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-play/assets/icon.png",
-  "summary": "Manage Google Play releases, listings, screenshots, Data Safety, and regional price previews.",
+  "summary": "Upload app bundles and manage Google Play releases, listings, screenshots, Data Safety, and regional prices.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-play",
   "requirements": {

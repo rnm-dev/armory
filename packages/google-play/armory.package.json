@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-play",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -11,7 +11,13 @@
   ],
   "permissions": {
     "networkHosts": ["androidpublisher.googleapis.com", "oauth2.googleapis.com"],
-    "hostPaths": []
+    "hostPaths": [
+      {
+        "path": "~/Projects",
+        "mode": "read",
+        "purpose": "Read operator-selected screenshots, store graphics, and Android App Bundles for Google Play upload."
+      }
+    ]
   },
   "dependencies": [],
   "profile": {

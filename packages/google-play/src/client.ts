@@ -1,4 +1,6 @@
 import { createSign } from "node:crypto";
+import { createReadStream } from "node:fs";
+import fs from "node:fs/promises";
 import type { GooglePlayConfig } from "./config.js";
 
 const SCOPE = "https://www.googleapis.com/auth/androidpublisher";
@@ -86,6 +88,26 @@ export class GooglePlayClient {
     return body as T;
   }
 
+  private async uploadFile<T>(path: string, contentType: string, filePath: string): Promise<T> {
+    const api = endpoint("API", API_URL);
+    const uploadApi = api.replace(/\/androidpublisher\/v3$/, "/upload/androidpublisher/v3");
+    const details = await fs.stat(filePath);
+    const response = await fetch(`${uploadApi}${path}${path.includes("?") ? "&" : "?"}uploadType=media`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${await this.accessToken()}`, "content-type": contentType, "content-length": String(details.size) },
+      body: createReadStream(filePath) as unknown as BodyInit,
+      duplex: "half",
+      signal: AbortSignal.timeout(120_000),
+    } as RequestInit & { duplex: "half" });
+    const body = await response.json().catch(() => undefined) as T | { error?: { message?: string } } | undefined;
+    if (!response.ok) {
+      const detail = body && typeof body === "object" && "error" in body ? body.error?.message : undefined;
+      throw new Error(`Google Play API request failed (HTTP ${response.status})${detail ? `: ${detail.slice(0, 1000)}` : ""}`);
+    }
+    if (body === undefined) throw new Error("Google Play API returned an invalid response");
+    return body as T;
+  }
+
   async verifyCredentials(): Promise<void> {
     await this.accessToken();
   }
@@ -153,6 +175,13 @@ export class GooglePlayClient {
     return await this.committedEdit(packageName, async (editId) => {
       const query = aiGeneratedState ? `?aiGeneratedState=${encodeURIComponent(aiGeneratedState)}` : "";
       return await this.upload(`${this.editPath(packageName, editId)}/listings/${encodeURIComponent(language)}/${encodeURIComponent(imageType)}${query}`, contentType, bytes);
+    });
+  }
+
+  async uploadBundle(packageName: string, filePath: string, deviceTierConfigId?: string): Promise<unknown> {
+    return await this.committedEdit(packageName, async (editId) => {
+      const query = deviceTierConfigId ? `?deviceTierConfigId=${encodeURIComponent(deviceTierConfigId)}` : "";
+      return await this.uploadFile(`${this.editPath(packageName, editId)}/bundles${query}`, "application/octet-stream", filePath);
     });
   }
 
