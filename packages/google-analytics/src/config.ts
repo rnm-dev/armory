@@ -1,8 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export type GoogleCredential = Record<string, unknown> & {
-  type: "service_account" | "authorized_user";
+export type GoogleCredential = {
+  type: "service_account";
+  client_email: string;
+  private_key: string;
+  private_key_id?: string;
+  project_id?: string;
 };
 
 export type GoogleAnalyticsConfig = {
@@ -19,18 +23,17 @@ export function configPath(home: string): string {
 
 export function parseCredential(value: string): GoogleCredential {
   const parsed = JSON.parse(value) as Partial<GoogleCredential>;
-  if (!parsed || typeof parsed !== "object" || !["service_account", "authorized_user"].includes(String(parsed.type))) {
-    throw new Error("credential must be a service_account or authorized_user JSON object");
+  if (parsed.type !== "service_account" || typeof parsed.client_email !== "string" || !parsed.client_email
+    || typeof parsed.private_key !== "string" || !parsed.private_key.includes("BEGIN PRIVATE KEY")) {
+    throw new Error("invalid service account credentials");
   }
-  if (parsed.type === "service_account"
-    && (typeof parsed.client_email !== "string" || typeof parsed.private_key !== "string")) {
-    throw new Error("service account credential is incomplete");
-  }
-  if (parsed.type === "authorized_user"
-    && (typeof parsed.client_id !== "string" || typeof parsed.client_secret !== "string" || typeof parsed.refresh_token !== "string")) {
-    throw new Error("authorized user credential is incomplete");
-  }
-  return parsed as GoogleCredential;
+  return {
+    type: "service_account",
+    client_email: parsed.client_email,
+    private_key: parsed.private_key,
+    ...(typeof parsed.private_key_id === "string" ? { private_key_id: parsed.private_key_id } : {}),
+    ...(typeof parsed.project_id === "string" ? { project_id: parsed.project_id } : {}),
+  };
 }
 
 export async function readConfig(home: string): Promise<GoogleAnalyticsConfig> {

@@ -14,11 +14,9 @@ Armory package for complete Google Analytics API access through MCP. It combines
 Enable the Google Analytics Data API and Google Analytics Admin API in a Google Cloud project. The recommended setup is:
 
 1. In Google Cloud Console, open **IAM & Admin > Service Accounts** and create or select a service account.
-2. Open **Keys > Add key > Create new key > JSON** and download the credential. Paste the complete file into **Google credential JSON**.
+2. Open **Keys > Add key > Create new key > JSON**, download the credential, and select it in **Service account JSON**.
 3. Copy `client_email` from that file. In Google Analytics, open **Admin > Account access management** or **Property access management**, add that email, and grant only the roles Peon needs.
 4. In Google Analytics, open **Admin > Property settings** and copy the numeric Property ID into **Default GA4 property ID** if a default is useful.
-
-An `authorized_user` credential JSON containing `client_id`, `client_secret`, and `refresh_token` is also accepted when interactive user authorization is required. The refresh token must already have the necessary Analytics OAuth scopes.
 
 For Measurement Protocol event collection:
 

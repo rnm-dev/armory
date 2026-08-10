@@ -6,7 +6,8 @@ import { readInput, result } from "./protocol.js";
 try {
   const input = await readInput();
   const fields = input.configuration;
-  if (input.operation !== "configure" || !fields || typeof fields.credentialJson !== "string") {
+  if (input.operation !== "configure" || !fields || typeof fields.serviceAccountJson !== "string"
+    || Buffer.byteLength(fields.serviceAccountJson) > 1024 * 1024) {
     throw new Error("invalid Google Analytics configuration");
   }
   const defaultPropertyId = fields.defaultPropertyId || undefined;
@@ -18,7 +19,7 @@ try {
   if (measurementRegion !== "global" && measurementRegion !== "eu") throw new Error("invalid measurement region");
 
   const config: GoogleAnalyticsConfig = {
-    credential: parseCredential(fields.credentialJson),
+    credential: parseCredential(fields.serviceAccountJson),
     ...(defaultPropertyId ? { defaultPropertyId } : {}),
     ...(measurementId ? { measurementId, measurementApiSecret } : {}),
     measurementRegion,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-analytics",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -23,16 +23,16 @@
   },
   "dependencies": [],
   "profile": {
-    "type": "google-oauth-credentials",
-    "requiredFields": ["credentialJson", "measurementRegion"]
+    "type": "google-service-account",
+    "requiredFields": ["serviceAccountJson"]
   },
   "configuration": {
     "fields": [
       {
-        "id": "credentialJson",
-        "label": "Google credential JSON",
-        "help": "Recommended: in Google Cloud Console, open IAM & Admin > Service Accounts, select or create a service account, then open Keys > Add key > Create new key > JSON and paste the entire downloaded file. In Google Analytics, add its client_email under Admin > Account or Property access management. An authorized_user JSON with a refresh token is also accepted.",
-        "type": "secret",
+        "id": "serviceAccountJson",
+        "label": "Service account JSON",
+        "help": "In Google Cloud Console, open IAM & Admin > Service Accounts, select or create a service account, then choose Keys > Add key > Create new key > JSON. In Google Analytics, add the JSON file's client_email under Admin > Account or Property access management, then select the downloaded JSON file here.",
+        "type": "file",
         "required": true,
         "validation": { "maxLength": 1048576 }
       },
@@ -65,7 +65,7 @@
         "label": "Measurement region",
         "help": "Choose the global or EU collection endpoint.",
         "type": "select",
-        "required": true,
+        "required": false,
         "options": [
           { "value": "global", "label": "Global" },
           { "value": "eu", "label": "European Union" }

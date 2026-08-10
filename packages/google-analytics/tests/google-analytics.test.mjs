@@ -11,8 +11,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const accessToken = "google_test_access_token_that_must_not_leak";
-const clientSecret = "google_client_secret_that_must_not_leak";
-const refreshToken = "google_refresh_token_that_must_not_leak";
+const privateKey = "-----BEGIN PRIVATE KEY-----\ngoogle_private_key_that_must_not_leak\n-----END PRIVATE KEY-----\n";
 const measurementSecret = "measurement_secret_that_must_not_leak";
 const propertyId = "123456789";
 
@@ -92,24 +91,24 @@ async function startGoogleApis() {
   };
 }
 
-test("manifest declares Google endpoints, secret credentials, and no host writes", async () => {
+test("manifest declares the shared service-account profile, Google endpoints, and no host writes", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   assert.equal(manifest.id, "google-analytics");
   assert.deepEqual(manifest.profile, {
-    type: "google-oauth-credentials",
-    requiredFields: ["credentialJson", "measurementRegion"],
+    type: "google-service-account",
+    requiredFields: ["serviceAccountJson"],
   });
   assert.deepEqual(manifest.permissions.hostPaths, []);
   assert(manifest.permissions.networkHosts.includes("analyticsdata.googleapis.com"));
   assert(manifest.permissions.networkHosts.includes("analyticsadmin.googleapis.com"));
   assert(manifest.permissions.networkHosts.includes("www.google-analytics.com"));
   const fields = Object.fromEntries(manifest.configuration.fields.map((field) => [field.id, field]));
-  assert.equal(fields.credentialJson.type, "secret");
-  assert.equal(fields.credentialJson.required, true);
+  assert.equal(fields.serviceAccountJson.type, "file");
+  assert.equal(fields.serviceAccountJson.required, true);
   assert.equal(fields.measurementApiSecret.type, "secret");
-  assert.match(fields.credentialJson.help, /IAM & Admin > Service Accounts/);
-  assert.match(fields.credentialJson.help, /Keys > Add key > Create new key > JSON/);
-  assert.match(fields.credentialJson.help, /Property access management/);
+  assert.match(fields.serviceAccountJson.help, /IAM & Admin > Service Accounts/);
+  assert.match(fields.serviceAccountJson.help, /Keys > Add key > Create new key > JSON/);
+  assert.match(fields.serviceAccountJson.help, /Property access management/);
   assert.match(fields.defaultPropertyId.help, /Admin > Property settings/);
   assert.match(fields.measurementId.help, /Admin > Data streams/);
   assert.match(fields.measurementApiSecret.help, /Measurement Protocol API secrets/);
@@ -118,7 +117,7 @@ test("manifest declares Google endpoints, secret credentials, and no host writes
 test("verification reports actionable failures without exposing Google response details", async () => {
   const fake = await startGoogleApis();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-analytics-errors-"));
-  const packageInfo = { id: "google-analytics", version: "0.1.2", dir: packageDir, home };
+  const packageInfo = { id: "google-analytics", version: "0.1.3", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
@@ -135,11 +134,10 @@ test("verification reports actionable failures without exposing Google response 
       package: packageInfo,
       platform,
       configuration: {
-        credentialJson: JSON.stringify({
-          type: "authorized_user",
-          client_id: "client-id.apps.googleusercontent.com",
-          client_secret: clientSecret,
-          refresh_token: refreshToken,
+        serviceAccountJson: JSON.stringify({
+          type: "service_account",
+          client_email: "analytics@example-project.iam.gserviceaccount.com",
+          private_key: privateKey,
         }),
         defaultPropertyId: propertyId,
         measurementRegion: "global",
@@ -197,8 +195,7 @@ test("verification reports actionable failures without exposing Google response 
       assert.equal(verified.code, 1);
       assert.equal(verified.stderr, "");
       assert.equal(verified.stdout.includes(sensitiveProviderDetail), false);
-      assert.equal(verified.stdout.includes(clientSecret), false);
-      assert.equal(verified.stdout.includes(refreshToken), false);
+      assert.equal(verified.stdout.includes(privateKey), false);
       const response = JSON.parse(verified.stdout);
       assert.equal(response.errorCode, scenario.errorCode);
       assert.match(response.message, scenario.message);
@@ -212,7 +209,7 @@ test("verification reports actionable failures without exposing Google response 
 test("configures, verifies, reports, administers, deletes, and measures without leaking secrets", async () => {
   const fake = await startGoogleApis();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-analytics-"));
-  const packageInfo = { id: "google-analytics", version: "0.1.2", dir: packageDir, home };
+  const packageInfo = { id: "google-analytics", version: "0.1.3", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
@@ -220,11 +217,10 @@ test("configures, verifies, reports, administers, deletes, and measures without 
     GOOGLE_ANALYTICS_TEST_MEASUREMENT_URL: fake.url,
     GOOGLE_ANALYTICS_TEST_ACCESS_TOKEN: accessToken,
   };
-  const credentialJson = JSON.stringify({
-    type: "authorized_user",
-    client_id: "client-id.apps.googleusercontent.com",
-    client_secret: clientSecret,
-    refresh_token: refreshToken,
+  const serviceAccountJson = JSON.stringify({
+    type: "service_account",
+    client_email: "analytics@example-project.iam.gserviceaccount.com",
+    private_key: privateKey,
   });
 
   try {
@@ -235,7 +231,7 @@ test("configures, verifies, reports, administers, deletes, and measures without 
       package: packageInfo,
       platform,
       configuration: {
-        credentialJson,
+        serviceAccountJson,
         defaultPropertyId: propertyId,
         measurementId: "G-TEST123",
         measurementApiSecret: measurementSecret,
@@ -243,15 +239,14 @@ test("configures, verifies, reports, administers, deletes, and measures without 
       },
     }, env);
     assert.equal(configured.code, 0, configured.stderr);
-    assert.equal(configured.stdout.includes(clientSecret), false);
-    assert.equal(configured.stdout.includes(refreshToken), false);
+    assert.equal(configured.stdout.includes(privateKey), false);
     assert.equal(configured.stdout.includes(measurementSecret), false);
     assert.equal(configured.stderr, "");
     assert.equal(JSON.parse(configured.stdout).ok, true);
 
     const storedPath = path.join(home, "config", "google-analytics.json");
     const stored = JSON.parse(await fs.readFile(storedPath, "utf8"));
-    assert.equal(stored.credential.refresh_token, refreshToken);
+    assert.equal(stored.credential.client_email, "analytics@example-project.iam.gserviceaccount.com");
     assert.equal((await fs.stat(storedPath)).mode & 0o777, 0o600);
 
     const verified = await runHook("verify", {
@@ -322,8 +317,7 @@ test("configures, verifies, reports, administers, deletes, and measures without 
     const apiRequests = fake.requests.filter((request) => !request.url.startsWith("/mp/") && !request.url.startsWith("/debug/"));
     assert(apiRequests.every((request) => request.authorization === `Bearer ${accessToken}`));
     const serializedBodies = JSON.stringify(fake.requests.map(({ method, body }) => ({ method, body })));
-    assert.equal(serializedBodies.includes(clientSecret), false);
-    assert.equal(serializedBodies.includes(refreshToken), false);
+    assert.equal(serializedBodies.includes(privateKey), false);
     assert(fake.requests.some((request) => request.url === `/v1beta/properties/${propertyId}:runReport`));
     assert(fake.requests.some((request) => request.method === "PATCH" && request.url.includes("updateMask=displayName")));
     assert(fake.requests.some((request) => request.url.startsWith("/debug/mp/collect")));
