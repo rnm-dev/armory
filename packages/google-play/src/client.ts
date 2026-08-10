@@ -16,6 +16,8 @@ export type Release = {
   inAppUpdatePriority?: number;
 };
 export type Track = { track?: string; releases?: Release[] };
+export type Listing = { language?: string; title?: string; shortDescription?: string; fullDescription?: string; video?: string };
+export type Image = { id?: string; url?: string; sha1?: string; sha256?: string; aiGeneratedState?: string };
 
 function endpoint(kind: "TOKEN" | "API", fallback: string): string {
   const override = process.env.NODE_ENV === "test" ? process.env[`GOOGLE_PLAY_TEST_${kind}_URL`] : undefined;
@@ -66,6 +68,24 @@ export class GooglePlayClient {
     return body as T;
   }
 
+  private async upload<T>(path: string, contentType: string, bytes: Uint8Array): Promise<T> {
+    const api = endpoint("API", API_URL);
+    const uploadApi = api.replace(/\/androidpublisher\/v3$/, "/upload/androidpublisher/v3");
+    const response = await fetch(`${uploadApi}${path}${path.includes("?") ? "&" : "?"}uploadType=media`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${await this.accessToken()}`, "content-type": contentType },
+      body: bytes,
+      signal: AbortSignal.timeout(30_000),
+    });
+    const body = await response.json().catch(() => undefined) as T | { error?: { message?: string } } | undefined;
+    if (!response.ok) {
+      const detail = body && typeof body === "object" && "error" in body ? body.error?.message : undefined;
+      throw new Error(`Google Play API request failed (HTTP ${response.status})${detail ? `: ${detail.slice(0, 1000)}` : ""}`);
+    }
+    if (body === undefined) throw new Error("Google Play API returned an invalid response");
+    return body as T;
+  }
+
   async verifyCredentials(): Promise<void> {
     await this.accessToken();
   }
@@ -100,6 +120,74 @@ export class GooglePlayClient {
       return await this.request(`${this.editPath(packageName, editId)}/tracks`);
     } finally {
       await this.deleteEdit(packageName, editId);
+    }
+  }
+
+  async listListings(packageName: string): Promise<{ listings?: Listing[] }> {
+    const editId = await this.createEdit(packageName);
+    try {
+      return await this.request(`${this.editPath(packageName, editId)}/listings`);
+    } finally {
+      await this.deleteEdit(packageName, editId);
+    }
+  }
+
+  async updateListing(packageName: string, language: string, listing: Listing): Promise<unknown> {
+    return await this.committedEdit(packageName, async (editId) => {
+      const path = `${this.editPath(packageName, editId)}/listings/${encodeURIComponent(language)}`;
+      return await this.request<Listing>(path, { method: "PATCH", body: JSON.stringify(listing) });
+    });
+  }
+
+  async listImages(packageName: string, language: string, imageType: string): Promise<{ images?: Image[] }> {
+    const editId = await this.createEdit(packageName);
+    try {
+      return await this.request(`${this.editPath(packageName, editId)}/listings/${encodeURIComponent(language)}/${encodeURIComponent(imageType)}`);
+    } finally {
+      await this.deleteEdit(packageName, editId);
+    }
+  }
+
+  async uploadImage(packageName: string, language: string, imageType: string, contentType: string, bytes: Uint8Array,
+    aiGeneratedState?: string): Promise<unknown> {
+    return await this.committedEdit(packageName, async (editId) => {
+      const query = aiGeneratedState ? `?aiGeneratedState=${encodeURIComponent(aiGeneratedState)}` : "";
+      return await this.upload(`${this.editPath(packageName, editId)}/listings/${encodeURIComponent(language)}/${encodeURIComponent(imageType)}${query}`, contentType, bytes);
+    });
+  }
+
+  async deleteImage(packageName: string, language: string, imageType: string, imageId: string): Promise<unknown> {
+    return await this.committedEdit(packageName, async (editId) => {
+      const path = `${this.editPath(packageName, editId)}/listings/${encodeURIComponent(language)}/${encodeURIComponent(imageType)}/${encodeURIComponent(imageId)}`;
+      await this.request<void>(path, { method: "DELETE" });
+      return { deleted: true, imageId };
+    });
+  }
+
+  async updateDataSafety(packageName: string, safetyLabels: string): Promise<unknown> {
+    return await this.request(`/applications/${encodeURIComponent(packageName)}/dataSafety`, {
+      method: "POST", body: JSON.stringify({ safetyLabels }),
+    });
+  }
+
+  async convertRegionPrices(packageName: string, price: { currencyCode: string; units: string; nanos?: number },
+    productTaxCategoryCode?: string): Promise<unknown> {
+    return await this.request(`/applications/${encodeURIComponent(packageName)}/pricing:convertRegionPrices`, {
+      method: "POST", body: JSON.stringify({ price, ...(productTaxCategoryCode ? { productTaxCategoryCode } : {}) }),
+    });
+  }
+
+  private async committedEdit(packageName: string, mutate: (editId: string) => Promise<unknown>): Promise<unknown> {
+    const editId = await this.createEdit(packageName);
+    let committed = false;
+    try {
+      const mutation = await mutate(editId);
+      await this.request(`${this.editPath(packageName, editId)}:validate`, { method: "POST", body: "{}" });
+      const commit = await this.request(`${this.editPath(packageName, editId)}:commit`, { method: "POST", body: "{}" });
+      committed = true;
+      return { mutation, commit };
+    } finally {
+      if (!committed) await this.deleteEdit(packageName, editId).catch(() => undefined);
     }
   }
 

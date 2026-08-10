@@ -44,6 +44,10 @@ async function startGoogleApi() {
     production: { track: "production", releases: [{ name: "1.0", versionCodes: ["100"], status: "inProgress", userFraction: 0.2 }] },
     beta: { track: "beta", releases: [] },
   };
+  const listings = { "en-US": { language: "en-US", title: "Example", shortDescription: "Before" } };
+  const images = { "en-US/phoneScreenshots": [{ id: "old-image", url: "https://example.test/old.png" }] };
+  let dataSafety;
+  let convertedPrice;
   const server = http.createServer(async (req, res) => {
     let body = "";
     for await (const chunk of req) body += chunk;
@@ -64,6 +68,22 @@ async function startGoogleApi() {
       return;
     }
     const base = `/androidpublisher/v3/applications/${defaultPackage}`;
+    const uploadBase = `/upload/androidpublisher/v3/applications/${defaultPackage}`;
+    const uploadMatch = req.url?.match(new RegExp(`^${uploadBase}/edits/([0-9]+)/listings/([^/]+)/([^?]+)\\?`));
+    if (req.method === "POST" && uploadMatch) {
+      const key = `${decodeURIComponent(uploadMatch[2])}/${decodeURIComponent(uploadMatch[3])}`;
+      const image = { id: "new-image", sha256: "test-sha" };
+      images[key] = [...(images[key] ?? []), image];
+      res.end(JSON.stringify({ image })); return;
+    }
+    if (req.method === "POST" && req.url === `${base}/dataSafety`) {
+      dataSafety = JSON.parse(body).safetyLabels;
+      res.end("{}"); return;
+    }
+    if (req.method === "POST" && req.url === `${base}/pricing:convertRegionPrices`) {
+      convertedPrice = JSON.parse(body);
+      res.end(JSON.stringify({ convertedRegionPrices: { US: { regionCode: "US", price: convertedPrice.price } } })); return;
+    }
     if (req.method === "POST" && req.url === `${base}/edits`) {
       res.end(JSON.stringify({ id: String(++nextEdit) })); return;
     }
@@ -73,6 +93,24 @@ async function startGoogleApi() {
       if (req.method === "DELETE" && suffix === "") { res.writeHead(204).end(); return; }
       if (req.method === "GET" && suffix === "/tracks") {
         res.end(JSON.stringify({ tracks: Object.values(tracks) })); return;
+      }
+      if (req.method === "GET" && suffix === "/listings") {
+        res.end(JSON.stringify({ listings: Object.values(listings) })); return;
+      }
+      const listingMatch = suffix.match(/^\/listings\/([^/]+)$/);
+      if (listingMatch && req.method === "PATCH") {
+        const locale = decodeURIComponent(listingMatch[1]);
+        listings[locale] = { ...(listings[locale] ?? { language: locale }), ...JSON.parse(body) };
+        res.end(JSON.stringify(listings[locale])); return;
+      }
+      const imageMatch = suffix.match(/^\/listings\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
+      if (imageMatch && req.method === "GET") {
+        res.end(JSON.stringify({ images: images[`${decodeURIComponent(imageMatch[1])}/${decodeURIComponent(imageMatch[2])}`] ?? [] })); return;
+      }
+      if (imageMatch?.[3] && req.method === "DELETE") {
+        const key = `${decodeURIComponent(imageMatch[1])}/${decodeURIComponent(imageMatch[2])}`;
+        images[key] = (images[key] ?? []).filter((image) => image.id !== decodeURIComponent(imageMatch[3]));
+        res.writeHead(204).end(); return;
       }
       const trackMatch = suffix.match(/^\/tracks\/(.+)$/);
       if (trackMatch && req.method === "GET") {
@@ -91,7 +129,7 @@ async function startGoogleApi() {
   await new Promise((resolve) => server.once("listening", resolve));
   const address = server.address();
   assert(address && typeof address === "object");
-  return { requests, tracks, url: `http://127.0.0.1:${address.port}`, close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())) };
+  return { requests, tracks, listings, images, get dataSafety() { return dataSafety; }, get convertedPrice() { return convertedPrice; }, url: `http://127.0.0.1:${address.port}`, close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())) };
 }
 
 test("manifest declares bounded credentials, API hosts, and no host writes", async () => {
@@ -107,7 +145,7 @@ test("manifest declares bounded credentials, API hosts, and no host writes", asy
 test("configures, verifies, inspects, and safely commits release changes without leaking secrets", async () => {
   const fake = await startGoogleApi();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-play-"));
-  const packageInfo = { id: "google-play", version: "0.1.2", dir: packageDir, home };
+  const packageInfo = { id: "google-play", version: "0.2.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", GOOGLE_PLAY_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_PLAY_TEST_API_URL: `${fake.url}/androidpublisher/v3` };
   try {
@@ -126,23 +164,34 @@ test("configures, verifies, inspects, and safely commits release changes without
     assert.equal(JSON.parse(verified.stdout).ok, true);
 
     const transport = new StdioClientTransport({ command: process.execPath, args: [path.join(packageDir, "dist", "mcp.js")], env: { ...process.env, ...env, PEON_ARMORY_HOME: home } });
-    const client = new Client({ name: "google-play-package-test", version: "0.1.2" });
+    const client = new Client({ name: "google-play-package-test", version: "0.2.0" });
     try {
       await client.connect(transport);
       const listed = await client.listTools();
-      assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "promote_release", "update_rollout"]);
+      assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "list_listings", "update_listing", "list_images", "upload_image", "delete_image", "update_data_safety", "convert_region_prices", "promote_release", "update_rollout"]);
       await client.callTool({ name: "list_releases", arguments: { packageName: defaultPackage } });
       await client.callTool({ name: "list_tracks", arguments: { packageName: defaultPackage } });
+      await client.callTool({ name: "list_listings", arguments: { packageName: defaultPackage } });
+      await client.callTool({ name: "update_listing", arguments: { packageName: defaultPackage, language: "en-US", shortDescription: "After", confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
+      await client.callTool({ name: "list_images", arguments: { packageName: defaultPackage, language: "en-US", imageType: "phoneScreenshots" } });
+      await client.callTool({ name: "upload_image", arguments: { packageName: defaultPackage, language: "en-US", imageType: "phoneScreenshots", contentType: "image/png", imageBase64: Buffer.from("fake png").toString("base64"), confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
+      await client.callTool({ name: "delete_image", arguments: { packageName: defaultPackage, language: "en-US", imageType: "phoneScreenshots", imageId: "old-image", confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
+      await client.callTool({ name: "update_data_safety", arguments: { packageName: defaultPackage, safetyLabelsCsv: "Question,Answer\nexample,true", confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
+      await client.callTool({ name: "convert_region_prices", arguments: { packageName: defaultPackage, currencyCode: "USD", units: "5", nanos: 990000000 } });
       await client.callTool({ name: "promote_release", arguments: { packageName: defaultPackage, targetTrack: "beta", versionCodes: ["100"], name: "1.0 beta", status: "draft", confirmation: "CONFIRM_RELEASE_CHANGE" } });
       await client.callTool({ name: "update_rollout", arguments: { packageName: defaultPackage, track: "production", versionCode: "100", status: "completed", confirmation: "CONFIRM_RELEASE_CHANGE" } });
     } finally { await client.close(); }
 
     assert.equal(fake.tracks.beta.releases[0].status, "draft");
     assert.equal(fake.tracks.production.releases[0].status, "completed");
+    assert.equal(fake.listings["en-US"].shortDescription, "After");
+    assert.deepEqual(fake.images["en-US/phoneScreenshots"].map((image) => image.id), ["new-image"]);
+    assert.equal(fake.dataSafety, "Question,Answer\nexample,true");
+    assert.equal(fake.convertedPrice.price.currencyCode, "USD");
     assert.equal("userFraction" in fake.tracks.production.releases[0], false);
     assert(fake.requests.some((request) => request.method === "DELETE"));
-    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":validate")).length, 2);
-    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":commit")).length, 2);
+    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":validate")).length, 5);
+    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":commit")).length, 5);
     assert.equal(fake.requests.some((request) => request.url?.includes("/tracks/production/releases")), false);
     const serialized = JSON.stringify(fake.requests);
     assert.equal(serialized.includes(privateKeySecret), false);

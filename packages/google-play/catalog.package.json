@@ -2,7 +2,7 @@
   "id": "google-play",
   "displayName": "Google Play",
   "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-play/assets/icon.png",
-  "summary": "Inspect Google Play releases and safely manage promotions and staged rollouts.",
+  "summary": "Manage Google Play releases, listings, screenshots, Data Safety, and regional price previews.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-play",
   "requirements": {
