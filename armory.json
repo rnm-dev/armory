@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-10T07:48:03.888Z",
+  "updatedAt": "2026-08-10T08:58:23.525Z",
   "packages": [
     {
       "id": "heroboard",
@@ -410,7 +410,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.2",
+      "latest": "0.1.3",
       "versions": [
         {
           "version": "0.1.0",
@@ -464,6 +464,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-analytics-v0.1.2/google-analytics-0.1.2.tar.gz",
             "size": 789611,
             "sha256": "f08f924835ac8957ea025b22540f50bc5da664e05fe49e91c68be0186c218f72"
+          }
+        },
+        {
+          "version": "0.1.3",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-analytics-v0.1.3/google-analytics-0.1.3.tar.gz",
+            "size": 789563,
+            "sha256": "65bf24b7ca4dd02db2bde2bba1d9648c2fb6c5534f8e1f74a9e6417275bafa13"
           }
         }
       ]
