@@ -81,6 +81,7 @@ async function startGoogleApi() {
     if (req.method === "POST" && bundleUploadMatch) {
       const bundle = { versionCode: "200", sha256: "bundle-sha" };
       bundles.push({ ...bundle, bytes: Buffer.byteLength(body) });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       res.end(JSON.stringify(bundle)); return;
     }
     if (req.method === "POST" && req.url === `${base}/dataSafety`) {
@@ -165,7 +166,7 @@ test("configures, verifies, inspects, and safely commits release changes without
   await fs.writeFile(bundlePath, "fake android app bundle");
   await fs.writeFile(outsideImagePath, "outside");
   await fs.symlink(outsideImagePath, linkedImagePath);
-  const packageInfo = { id: "google-play", version: "0.3.1", dir: packageDir, home };
+  const packageInfo = { id: "google-play", version: "0.4.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
@@ -194,7 +195,7 @@ test("configures, verifies, inspects, and safely commits release changes without
     try {
       await client.connect(transport);
       const listed = await client.listTools();
-      assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "list_listings", "update_listing", "list_images", "upload_image", "upload_bundle", "delete_image", "update_data_safety", "convert_region_prices", "promote_release", "update_rollout"]);
+      assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "list_listings", "update_listing", "list_images", "upload_image", "upload_bundle", "get_bundle_upload_status", "delete_image", "update_data_safety", "convert_region_prices", "promote_release", "update_rollout"]);
       await client.callTool({ name: "list_releases", arguments: { packageName: defaultPackage } });
       await client.callTool({ name: "list_tracks", arguments: { packageName: defaultPackage } });
       await client.callTool({ name: "list_listings", arguments: { packageName: defaultPackage } });
@@ -205,7 +206,19 @@ test("configures, verifies, inspects, and safely commits release changes without
       const symlinkUpload = await client.callTool({ name: "upload_image", arguments: { packageName: defaultPackage, language: "en-US", imageType: "phoneScreenshots", filePath: linkedImagePath, confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
       assert.equal(symlinkUpload.isError, true);
       await client.callTool({ name: "upload_image", arguments: { packageName: defaultPackage, language: "en-US", imageType: "phoneScreenshots", filePath: imagePath, confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
-      await client.callTool({ name: "upload_bundle", arguments: { packageName: defaultPackage, filePath: bundlePath, confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
+      const uploadStartedAt = Date.now();
+      const uploadStarted = await client.callTool({ name: "upload_bundle", arguments: { packageName: defaultPackage, filePath: bundlePath, confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
+      assert(Date.now() - uploadStartedAt < 750, "upload_bundle must return before the delayed Google upload finishes");
+      const uploadOperation = JSON.parse(uploadStarted.content[0].text);
+      assert.equal(uploadOperation.status, "running");
+      let uploadStatus;
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const polled = await client.callTool({ name: "get_bundle_upload_status", arguments: { operationId: uploadOperation.operationId } });
+        uploadStatus = JSON.parse(polled.content[0].text);
+        if (uploadStatus.status !== "running") break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      assert.equal(uploadStatus.status, "succeeded");
       await client.callTool({ name: "delete_image", arguments: { packageName: defaultPackage, language: "en-US", imageType: "phoneScreenshots", imageId: "old-image", confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
       await client.callTool({ name: "update_data_safety", arguments: { packageName: defaultPackage, safetyLabelsCsv: "Question,Answer\nexample,true", confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
       await client.callTool({ name: "convert_region_prices", arguments: { packageName: defaultPackage, currencyCode: "USD", units: "5", nanos: 990000000 } });

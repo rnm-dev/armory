@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { GooglePlayClient } from "./client.js";
 import { readConfig } from "./config.js";
@@ -10,7 +11,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GooglePlayClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-play", version: "0.3.1" });
+const server = new McpServer({ name: "armory-google-play", version: "0.4.0" });
 const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255);
 const track = z.string().min(1).max(255);
 const versionCode = z.string().regex(/^[1-9][0-9]*$/).max(20);
@@ -22,6 +23,20 @@ const output = (value: unknown) => ({ content: [{ type: "text" as const, text: J
 const projectsRoot = process.env.NODE_ENV === "test" && process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT
   ? process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT
   : path.join(process.env.PEON_ARMORY_HOST_HOME ?? os.homedir(), "Projects");
+type BundleUploadOperation = {
+  status: "running" | "succeeded" | "failed";
+  startedAt: string;
+  finishedAt?: string;
+  result?: unknown;
+  error?: string;
+};
+const bundleUploads = new Map<string, BundleUploadOperation>();
+const MAX_BUNDLE_OPERATIONS = 20;
+
+function rememberBundleUpload(operationId: string, operation: BundleUploadOperation): void {
+  bundleUploads.set(operationId, operation);
+  while (bundleUploads.size > MAX_BUNDLE_OPERATIONS) bundleUploads.delete(bundleUploads.keys().next().value!);
+}
 
 async function projectFile(filePath: string, extension: RegExp, maxBytes: number, label: string): Promise<{ path: string; size: number }> {
   if (!path.isAbsolute(filePath)) throw new Error(`${label} path must be absolute and under ~/Projects`);
@@ -84,12 +99,31 @@ server.registerTool("upload_image", {
 });
 
 server.registerTool("upload_bundle", {
-  description: "Stream an Android App Bundle from an absolute .aab file path under ~/Projects, validate the edit, and commit it. Requires explicit confirmation.",
+  description: "Start an asynchronous Android App Bundle upload from an absolute .aab path under ~/Projects. Returns an operationId; poll get_bundle_upload_status until succeeded or failed. Requires explicit confirmation.",
   inputSchema: { packageName, filePath: z.string().min(1).max(4096),
     deviceTierConfigId: z.string().min(1).max(100).optional(), confirmation: publishConfirmation },
 }, async ({ packageName, filePath, deviceTierConfigId }) => {
   const bundle = await projectFile(filePath, /^\.aab$/i, 53_687_091_200, "Android App Bundle");
-  return output(await api.uploadBundle(packageName, bundle.path, deviceTierConfigId));
+  const operationId = randomUUID();
+  const startedAt = new Date().toISOString();
+  rememberBundleUpload(operationId, { status: "running", startedAt });
+  void api.uploadBundle(packageName, bundle.path, deviceTierConfigId).then(
+    (result) => rememberBundleUpload(operationId, { status: "succeeded", startedAt, finishedAt: new Date().toISOString(), result }),
+    (error) => rememberBundleUpload(operationId, {
+      status: "failed", startedAt, finishedAt: new Date().toISOString(),
+      error: (error instanceof Error ? error.message : String(error)).slice(0, 1000),
+    }),
+  );
+  return output({ operationId, status: "running", next: "Call get_bundle_upload_status with this operationId until the status is succeeded or failed." });
+});
+
+server.registerTool("get_bundle_upload_status", {
+  description: "Poll a bundle upload operation started by upload_bundle.",
+  inputSchema: { operationId: z.uuid() },
+}, async ({ operationId }) => {
+  const operation = bundleUploads.get(operationId);
+  if (!operation) throw new Error("Bundle upload operation is unknown or no longer retained");
+  return output({ operationId, ...operation });
 });
 
 server.registerTool("delete_image", {

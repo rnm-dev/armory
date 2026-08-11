@@ -97,7 +97,7 @@ export class GooglePlayClient {
       headers: { authorization: `Bearer ${await this.accessToken()}`, "content-type": contentType, "content-length": String(details.size) },
       body: createReadStream(filePath) as unknown as BodyInit,
       duplex: "half",
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(15 * 60_000),
     } as RequestInit & { duplex: "half" });
     const body = await response.json().catch(() => undefined) as T | { error?: { message?: string } } | undefined;
     if (!response.ok) {

@@ -20,7 +20,8 @@ Every tool requires the Android `packageName` of the app to operate on; it is no
 - `update_listing`: patch and publish a localized title, descriptions, or promo video URL.
 - `list_images`: inspect screenshots and store graphics by locale and image type.
 - `upload_image`: upload and publish a PNG or JPEG from an absolute path under `~/Projects`, with optional AI-generated-content attestation.
-- `upload_bundle`: stream an `.aab` under `~/Projects`, validate the edit, and commit the uploaded bundle.
+- `upload_bundle`: start an asynchronous streamed `.aab` upload under `~/Projects`; returns an operation ID immediately.
+- `get_bundle_upload_status`: poll until the upload, edit validation, and commit succeed or fail.
 - `delete_image`: remove and publish removal of a screenshot or store graphic.
 - `update_data_safety`: submit the complete Data Safety CSV declaration. The Google API is write-only and does not expose the current declaration.
 - `convert_region_prices`: preview region-specific prices from a tax-exclusive base price without changing a product.
