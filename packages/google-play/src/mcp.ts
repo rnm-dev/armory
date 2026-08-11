@@ -10,7 +10,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GooglePlayClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-play", version: "0.3.0" });
+const server = new McpServer({ name: "armory-google-play", version: "0.3.1" });
 const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255);
 const track = z.string().min(1).max(255);
 const versionCode = z.string().regex(/^[1-9][0-9]*$/).max(20);
@@ -20,7 +20,8 @@ const language = z.string().regex(/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/).max(3
 const imageType = z.enum(["phoneScreenshots", "sevenInchScreenshots", "tenInchScreenshots", "tvScreenshots", "wearScreenshots", "icon", "featureGraphic", "tvBanner"]);
 const output = (value: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] });
 const projectsRoot = process.env.NODE_ENV === "test" && process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT
-  ? process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT : path.join(os.homedir(), "Projects");
+  ? process.env.GOOGLE_PLAY_TEST_PROJECTS_ROOT
+  : path.join(process.env.PEON_ARMORY_HOST_HOME ?? os.homedir(), "Projects");
 
 async function projectFile(filePath: string, extension: RegExp, maxBytes: number, label: string): Promise<{ path: string; size: number }> {
   if (!path.isAbsolute(filePath)) throw new Error(`${label} path must be absolute and under ~/Projects`);

@@ -165,9 +165,15 @@ test("configures, verifies, inspects, and safely commits release changes without
   await fs.writeFile(bundlePath, "fake android app bundle");
   await fs.writeFile(outsideImagePath, "outside");
   await fs.symlink(outsideImagePath, linkedImagePath);
-  const packageInfo = { id: "google-play", version: "0.3.0", dir: packageDir, home };
+  const packageInfo = { id: "google-play", version: "0.3.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
-  const env = { NODE_ENV: "test", GOOGLE_PLAY_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_PLAY_TEST_API_URL: `${fake.url}/androidpublisher/v3`, GOOGLE_PLAY_TEST_PROJECTS_ROOT: projectsRoot };
+  const env = {
+    NODE_ENV: "test",
+    HOME: path.join(home, "isolated-runtime-home"),
+    PEON_ARMORY_HOST_HOME: home,
+    GOOGLE_PLAY_TEST_TOKEN_URL: `${fake.url}/token`,
+    GOOGLE_PLAY_TEST_API_URL: `${fake.url}/androidpublisher/v3`,
+  };
   try {
     const configured = await runHook("configure", {
       protocolVersion: 1, type: "input", operation: "configure", package: packageInfo, platform,
