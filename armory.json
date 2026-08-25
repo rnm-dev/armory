@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-11T09:48:44.789Z",
+  "updatedAt": "2026-08-25T13:43:10.372Z",
   "packages": [
     {
       "id": "heroboard",
@@ -691,14 +691,14 @@
       "id": "playwright",
       "displayName": "Playwright",
       "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/playwright/assets/icon.png",
-      "summary": "Test local web applications through an operator-installed headless Chrome or Chromium browser.",
+      "summary": "Browse and test HTTP(S) websites through an operator-installed headless Chrome or Chromium browser.",
       "publisher": "rnm-dev",
       "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/playwright",
       "requirements": {
         "credentials": false,
         "hostWrites": false
       },
-      "latest": "0.1.1",
+      "latest": "0.2.0",
       "versions": [
         {
           "version": "0.1.0",
@@ -752,6 +752,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/playwright-v0.1.1/playwright-0.1.1.tar.gz",
             "size": 3299003,
             "sha256": "8806eb8be44295f5ce88a50b1c0feb5c4313224c261629e1f85096a898e5d327"
+          }
+        },
+        {
+          "version": "0.2.0",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/playwright-v0.2.0/playwright-0.2.0.tar.gz",
+            "size": 3299176,
+            "sha256": "80af569587c6cc06af5bcfa3ba8fb507c8bd750d85db20240f27237e3d8c69cd"
           }
         }
       ]
