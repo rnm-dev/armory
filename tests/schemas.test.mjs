@@ -63,6 +63,19 @@ test("minimal package manifest is valid", () => {
   }), true);
 });
 
+test("package manifest accepts unrestricted network access", () => {
+  assert.equal(validators.manifest({
+    schemaVersion: 1,
+    id: "fixture-browser",
+    version: "1.0.0",
+    minPeonVersion: "0.0.1",
+    platforms: [{ os: "linux", arch: "x64" }],
+    permissions: { networkHosts: ["*"], hostPaths: [] },
+    dependencies: [],
+    mcp: { command: { executable: "node", args: ["dist/mcp.js"] }, toolPrefix: "fixture_browser" },
+  }), true);
+});
+
 test("profile declarations use the settled bounded contract", () => {
   const manifest = {
     schemaVersion: 1,

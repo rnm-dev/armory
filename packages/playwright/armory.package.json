@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "playwright",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -10,52 +10,52 @@
     { "os": "linux", "arch": "x64" }
   ],
   "permissions": {
-    "networkHosts": ["localhost", "127.0.0.1"],
+    "networkHosts": ["*"],
     "hostPaths": [
       {
         "path": "/Applications/Google Chrome.app",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chrome browser on macOS for local web application testing."
+        "purpose": "Launch an operator-installed Chrome browser on macOS for web browsing and testing."
       },
       {
         "path": "/Applications/Chromium.app",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chromium browser on macOS for local web application testing."
+        "purpose": "Launch an operator-installed Chromium browser on macOS for web browsing and testing."
       },
       {
         "path": "/opt/google/chrome/chrome",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chrome browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chrome browser on Linux for web browsing and testing."
       },
       {
         "path": "/opt/google/chrome-beta/chrome",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chrome browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chrome browser on Linux for web browsing and testing."
       },
       {
         "path": "/opt/chromium.org/chromium/chrome",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chromium browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chromium browser on Linux for web browsing and testing."
       },
       {
         "path": "/usr/lib/chromium/chromium",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chromium browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chromium browser on Linux for web browsing and testing."
       },
       {
         "path": "/usr/lib/chromium-browser/chromium-browser",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chromium browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chromium browser on Linux for web browsing and testing."
       },
       {
         "path": "/usr/bin/google-chrome",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chrome browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chrome browser on Linux for web browsing and testing."
       },
       {
         "path": "/usr/bin/chromium",
         "mode": "read",
-        "purpose": "Launch an operator-installed Chromium browser on Linux for local web application testing."
+        "purpose": "Launch an operator-installed Chromium browser on Linux for web browsing and testing."
       }
     ]
   },

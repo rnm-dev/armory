@@ -30,10 +30,10 @@ async function startSite() {
   };
 }
 
-test("manifest limits browser access to local testing", async () => {
+test("manifest allows browser access to HTTP(S) websites", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   const browserPaths = manifest.permissions.hostPaths.map(({ path: browserPath }) => browserPath);
-  assert.deepEqual(manifest.permissions.networkHosts, ["localhost", "127.0.0.1"]);
+  assert.deepEqual(manifest.permissions.networkHosts, ["*"]);
   assert(manifest.permissions.hostPaths.every(({ mode }) => mode === "read"));
   assert.deepEqual(manifest.dependencies, []);
   assert(manifest.permissions.hostPaths.some(({ path: browserPath }) => browserPath.includes("Google Chrome")));
@@ -104,8 +104,9 @@ test("navigates, inspects, interacts with, and captures a local page", async () 
     assert.equal(screenshot.content[0].mimeType, "image/png");
     assert(Buffer.from(screenshot.content[0].data, "base64").subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])));
 
-    const rejected = await client.callTool({ name: "navigate", arguments: { url: "https://example.com" } });
+    const rejected = await client.callTool({ name: "navigate", arguments: { url: "file:///etc/passwd" } });
     assert.equal(rejected.isError, true);
+    assert.match(rejected.content[0].text, /Only http\(s\) URLs are allowed/);
     await client.callTool({ name: "close", arguments: {} });
   } finally {
     await client.close();

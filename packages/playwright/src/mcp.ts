@@ -20,12 +20,10 @@ const BROWSER_PATHS = process.platform === "darwin"
       "/usr/bin/chromium",
     ];
 const SYSTEM_PATH = "/usr/local/bin:/usr/bin:/bin";
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
-
-function localUrl(value: string): URL {
+function webUrl(value: string): URL {
   const url = new URL(value);
-  if (!["http:", "https:"].includes(url.protocol) || !LOCAL_HOSTS.has(url.hostname.toLowerCase())) {
-    throw new Error("Only http(s) URLs on localhost or 127.0.0.1 are allowed");
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Only http(s) URLs are allowed");
   }
   return url;
 }
@@ -76,7 +74,7 @@ async function currentPage(): Promise<Page> {
       const url = route.request().url();
       if (url === "about:blank" || url.startsWith("data:")) return route.continue();
       try {
-        localUrl(url);
+        webUrl(url);
         return route.continue();
       } catch {
         return route.abort("blockedbyclient");
@@ -95,13 +93,13 @@ async function closeBrowser(): Promise<void> {
   await fs.rm(profileDir, { recursive: true, force: true });
 }
 
-const server = new McpServer({ name: "armory-playwright", version: "0.1.1" });
+const server = new McpServer({ name: "armory-playwright", version: "0.2.0" });
 
 server.registerTool("navigate", {
-  description: "Navigate the browser to a localhost URL and wait for the DOM to be ready.",
+  description: "Navigate the browser to an HTTP(S) URL and wait for the DOM to be ready.",
   inputSchema: { url: z.string().url().max(4096) },
 }, async ({ url }) => {
-  const target = localUrl(url).toString();
+  const target = webUrl(url).toString();
   const response = await (await currentPage()).goto(target, { waitUntil: "domcontentloaded" });
   return { content: [{ type: "text", text: JSON.stringify({ url: (await currentPage()).url(), status: response?.status() ?? null }) }] };
 });

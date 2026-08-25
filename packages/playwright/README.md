@@ -1,7 +1,6 @@
 # Playwright
 
-Armory MCP package for testing web applications running on `localhost` or
-`127.0.0.1`. It drives an operator-installed Chrome or Chromium browser in
+Armory MCP package for browsing and testing HTTP(S) websites. It drives an operator-installed Chrome or Chromium browser in
 headless mode and does not require credentials or write to the tested project.
 
 ## Browser requirement
@@ -17,7 +16,7 @@ and is removed when the browser session closes.
 
 ## Tools
 
-- `navigate`: open an HTTP(S) localhost URL
+- `navigate`: open any HTTP(S) URL
 - `snapshot`: return a YAML accessibility snapshot
 - `wait_for`: wait for a selector state
 - `click`: click a selected element
@@ -26,5 +25,5 @@ and is removed when the browser session closes.
 - `screenshot`: return a PNG page capture
 - `close`: discard the browser session and its profile
 
-Requests to non-local hosts are blocked both at the MCP tool boundary and by
-the browser context's request routing.
+The package declares unrestricted network access so pages and their subresources
+can load from external hosts. Navigation remains limited to HTTP(S) URLs.
