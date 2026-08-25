@@ -15,6 +15,7 @@ export type CloudflareCapabilities = {
   tunnels: boolean;
   turnstile: boolean;
   pages: boolean;
+  workers: boolean;
 };
 
 export const disabledCapabilities: CloudflareCapabilities = {
@@ -23,6 +24,7 @@ export const disabledCapabilities: CloudflareCapabilities = {
   tunnels: false,
   turnstile: false,
   pages: false,
+  workers: false,
 };
 
 export const enabledCapabilities: CloudflareCapabilities = {
@@ -31,6 +33,7 @@ export const enabledCapabilities: CloudflareCapabilities = {
   tunnels: true,
   turnstile: true,
   pages: true,
+  workers: true,
 };
 
 export function apiUrl(): string {
@@ -57,6 +60,8 @@ export async function readConfig(home: string): Promise<CloudflareConfig> {
       tunnels: value.capabilities.tunnels === true,
       turnstile: value.capabilities.turnstile === true,
       pages: value.capabilities.pages === true,
+      // Configurations written before Workers support have no field; enable it until verify re-probes permissions.
+      workers: value.capabilities.workers === undefined ? true : value.capabilities.workers === true,
     };
   return {
     apiToken: value.apiToken,

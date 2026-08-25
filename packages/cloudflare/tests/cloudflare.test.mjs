@@ -19,6 +19,8 @@ const turnstileSitekey = "0x4AAAAAAAAAAAAAAAAAAAAAAA";
 const pagesProjectName = "turnstile-app";
 const pagesSecret = "pages_turnstile_secret_that_must_not_leak";
 const pagesUploadJwt = "pages_upload_jwt_that_must_not_leak";
+const workerSecret = "worker_secret_that_must_not_leak";
+const workerScriptName = "kundel-worker";
 const compiledFunctionsWorker = "export default { fetch() { return new Response('compiled-functions-marker'); } };";
 
 async function runHook(name, input, env) {
@@ -61,12 +63,13 @@ async function startCloudflare({ disabledCapabilities = [] } = {}) {
       res.end(JSON.stringify({ success: true, result: { status: "active" } }));
       return;
     }
-    const capabilityProbe = (body === "{}" || body === '{"paused":"armory-permission-probe"}') && (
+    const capabilityProbe = (body === "{}" || body === '{"paused":"armory-permission-probe"}' || req.method === "GET") && (
       req.method === "PATCH" && /^\/zones\/[0-9a-f]{32}$/.test(req.url ?? "") ? "zones"
         : req.method === "PATCH" && /^\/zones\/[0-9a-f]{32}\/dns_records\/[0-9a-f]{32}$/.test(req.url ?? "") ? "dns"
           : req.method === "PATCH" && req.url?.startsWith(`/accounts/${accountId}/cfd_tunnel/`) ? "tunnels"
             : req.method === "PUT" && req.url?.startsWith(`/accounts/${accountId}/challenges/widgets/`) ? "turnstile"
               : req.method === "PATCH" && req.url?.startsWith(`/accounts/${accountId}/pages/projects/armory-permission-probe-`) ? "pages"
+                : req.method === "GET" && req.url?.startsWith(`/accounts/${accountId}/workers/scripts/armory-permission-probe-`) ? "workers"
                 : undefined
     );
     if (capabilityProbe && disabledCapabilities.includes(capabilityProbe)) {
@@ -194,6 +197,18 @@ async function startCloudflare({ disabledCapabilities = [] } = {}) {
       } }));
       return;
     }
+    if (req.method === "PUT" && req.url === `/accounts/${accountId}/workers/scripts/${workerScriptName}`) {
+      res.end(JSON.stringify({ success: true, result: { etag: "worker-etag", size: body.length } }));
+      return;
+    }
+    if (req.method === "PUT" && req.url === `/accounts/${accountId}/workers/scripts/${workerScriptName}/secrets`) {
+      res.end(JSON.stringify({ success: true, result: { name: JSON.parse(body).name, type: "secret_text" } }));
+      return;
+    }
+    if (req.method === "GET" && req.url === `/accounts/${accountId}/workers/scripts/${workerScriptName}/deployments`) {
+      res.end(JSON.stringify({ success: true, result: { id: "worker-deployment-1", source: "api" } }));
+      return;
+    }
     if (req.method === "PUT" && req.url === `/accounts/${accountId}/cfd_tunnel/${tunnelId}/configurations`) {
       res.end(JSON.stringify({ success: true, result: { tunnel_id: tunnelId, ...JSON.parse(body) } }));
       return;
@@ -233,6 +248,7 @@ test("manifest declares scoped credential configuration and no host writes", asy
   assert.match(manifest.configuration.fields[0].help, /Cloudflare Tunnel Write/);
   assert.match(manifest.configuration.fields[0].help, /Turnstile Sites Write/);
   assert.match(manifest.configuration.fields[0].help, /Pages Write/);
+  assert.match(manifest.configuration.fields[0].help, /Workers Scripts Write/);
   assert.match(manifest.configuration.fields[1].help, /Account home/);
   assert.match(manifest.configuration.fields[1].help, /Copy account ID/);
 });
@@ -256,6 +272,32 @@ test("starts with every tool when updating from a pre-capability configuration",
     assert(tools.includes("list_tunnels"));
     assert(tools.includes("list_turnstile_widgets"));
     assert(tools.includes("deploy_pages_project"));
+    assert(tools.includes("deploy_worker_script"));
+  } finally {
+    await client.close();
+    await fs.rm(home, { recursive: true, force: true });
+  }
+});
+
+test("enables Workers tools when updating a capability configuration from 0.5.x", async () => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-old-capabilities-"));
+  await fs.mkdir(path.join(home, "config"), { recursive: true });
+  await fs.writeFile(path.join(home, "config", "cloudflare.json"), JSON.stringify({
+    apiToken,
+    accountId,
+    capabilities: { zones: true, dns: true, tunnels: true, turnstile: true, pages: true },
+  }));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.join(packageDir, "dist", "mcp.js")],
+    env: { ...process.env, PEON_ARMORY_HOME: home },
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "cloudflare-old-capabilities-test", version: "1.0.0" });
+  try {
+    await client.connect(transport);
+    const tools = (await client.listTools()).tools.map(({ name }) => name);
+    assert(tools.includes("deploy_worker_script"));
   } finally {
     await client.close();
     await fs.rm(home, { recursive: true, force: true });
@@ -265,7 +307,7 @@ test("starts with every tool when updating from a pre-capability configuration",
 test("verifies account-owned API tokens with the account-scoped endpoint", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-account-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.3", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.6.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -300,7 +342,7 @@ test("verifies account-owned API tokens with the account-scoped endpoint", async
 test("disables and hides Pages tools when the token lacks Pages edit permission", async () => {
   const fake = await startCloudflare({ disabledCapabilities: ["pages"] });
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-limited-token-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.3", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.6.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -332,6 +374,7 @@ test("disables and hides Pages tools when the token lacks Pages edit permission"
       tunnels: true,
       turnstile: true,
       pages: false,
+      workers: true,
     });
 
     const transport = new StdioClientTransport({
@@ -355,10 +398,10 @@ test("disables and hides Pages tools when the token lacks Pages edit permission"
   }
 });
 
-test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages without leaking credentials", async () => {
+test("configures, verifies, and manages DNS, tunnels, Turnstile, Pages, and Workers without leaking credentials", async () => {
   const fake = await startCloudflare();
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-cloudflare-"));
-  const packageInfo = { id: "cloudflare", version: "0.5.3", dir: packageDir, home };
+  const packageInfo = { id: "cloudflare", version: "0.6.0", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", CLOUDFLARE_TEST_API_URL: fake.url };
 
@@ -438,6 +481,7 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
         "rotate_turnstile_widget_secret", "delete_turnstile_widget",
         "set_pages_secret", "deploy_pages_project",
         "direct_upload_pages_project", "get_pages_deployment_status",
+        "deploy_worker_script", "set_worker_secret", "get_worker_deployment",
       ]);
       await client.callTool({ name: "list_zones", arguments: {} });
       await client.callTool({ name: "create_zone", arguments: { name: "example.com", type: "full" } });
@@ -502,6 +546,24 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
       assert.equal(directUpload.functionsWorkerBytes, Buffer.byteLength(compiledFunctionsWorker));
       assert.equal(directUpload.files, 1);
       assert.equal(JSON.stringify(directUploadResult).includes(pagesSecret), false);
+      const workerDeployResult = await client.callTool({ name: "deploy_worker_script", arguments: {
+        scriptName: workerScriptName,
+        script: "export default { fetch() { return new Response('ok'); } };",
+        compatibilityDate: "2026-08-25",
+        confirm: true,
+      } });
+      assert.equal(JSON.parse(workerDeployResult.content[0].text).deployed, true);
+      const workerSecretResult = await client.callTool({ name: "set_worker_secret", arguments: {
+        scriptName: workerScriptName,
+        secretName: "API_SECRET",
+        secretValue: workerSecret,
+        confirm: true,
+      } });
+      assert.equal(JSON.stringify(workerSecretResult).includes(workerSecret), false);
+      const workerDeploymentResult = await client.callTool({ name: "get_worker_deployment", arguments: {
+        scriptName: workerScriptName,
+      } });
+      assert.equal(JSON.parse(workerDeploymentResult.content[0].text).id, "worker-deployment-1");
     } finally {
       await client.close();
     }
@@ -535,6 +597,15 @@ test("configures, verifies, and manages DNS, tunnels, Turnstile, and Pages witho
       && request.body.includes(compiledFunctionsWorker)
       && !request.body.includes('name="_worker.js"')
       && !request.body.includes("worker.mjs")));
+    assert(fake.requests.some((request) => request.method === "PUT"
+      && request.url?.endsWith(`/workers/scripts/${workerScriptName}`)
+      && request.contentType?.startsWith("multipart/form-data; boundary=")
+      && request.body.includes('name="metadata"')
+      && request.body.includes('name="worker.mjs"; filename="worker.mjs"')));
+    assert(fake.requests.some((request) => request.method === "PUT"
+      && request.url?.endsWith(`/workers/scripts/${workerScriptName}/secrets`)
+      && request.body.includes('"name":"API_SECRET"')));
+    assert.equal(JSON.stringify(fake.requests.map(({ url, authorization }) => ({ url, authorization }))).includes(workerSecret), false);
     const wranglerArgs = JSON.parse(await fs.readFile(path.join(projectRoot, ".wrangler-test-args.json"), "utf8"));
     assert.deepEqual(wranglerArgs.slice(0, 4), ["pages", "functions", "build", await fs.realpath(functionsRoot)]);
     assert(wranglerArgs.includes("--outdir"));

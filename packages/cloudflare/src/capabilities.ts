@@ -18,13 +18,14 @@ export async function detectCapabilities(
     body,
   }).catch(() => false);
 
-  const [zoneEdit, dns, tunnels, turnstile, pages] = await Promise.all([
+  const [zoneEdit, dns, tunnels, turnstile, pages, workers] = await Promise.all([
     probe(`/zones/${probeZoneId}`, "PATCH", JSON.stringify({ paused: "armory-permission-probe" })),
     probe(`/zones/${probeZoneId}/dns_records/${missingId}`, "PATCH"),
     probe(`${accountPath}/cfd_tunnel/${randomUUID()}`, "PATCH"),
     probe(`${accountPath}/challenges/widgets/${missingId}`, "PUT"),
     probe(`${accountPath}/pages/projects/${missingProject}`, "PATCH"),
+    client.hasPermission(`${accountPath}/workers/scripts/${missingProject}`, { method: "GET" }).catch(() => false),
   ]);
 
-  return { zones: zoneEdit, dns, tunnels, turnstile, pages };
+  return { zones: zoneEdit, dns, tunnels, turnstile, pages, workers };
 }

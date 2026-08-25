@@ -9,7 +9,7 @@ const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const config = await readConfig(home);
 const api = new CloudflareClient(config);
-const server = new McpServer({ name: "armory-cloudflare", version: "0.5.3" });
+const server = new McpServer({ name: "armory-cloudflare", version: "0.6.0" });
 
 const id = z.string().min(1).max(64);
 const zoneId = id.describe("Cloudflare zone ID");
@@ -495,6 +495,62 @@ server.registerTool("get_pages_deployment_status", {
 
   return output(result);
 });
+}
+
+if (config.capabilities.workers) {
+const workerScriptName = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/)
+  .describe("Cloudflare Worker script name");
+
+server.registerTool("deploy_worker_script", {
+  description: "Deploy a single-module Cloudflare Worker script using the MCP package's configured API token.",
+  inputSchema: {
+    scriptName: workerScriptName,
+    script: z.string().min(1).max(10_000_000).describe("JavaScript or TypeScript ES module source"),
+    compatibilityDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    compatibilityFlags: z.array(z.string().min(1).max(128)).max(100).optional(),
+    confirm,
+  },
+}, async ({ scriptName, script, compatibilityDate, compatibilityFlags }) => {
+  const form = new FormData();
+  form.set("metadata", new Blob([JSON.stringify({
+    main_module: "worker.mjs",
+    ...(compatibilityDate === undefined ? {} : { compatibility_date: compatibilityDate }),
+    ...(compatibilityFlags === undefined ? {} : { compatibility_flags: compatibilityFlags }),
+  })], { type: "application/json" }), "metadata.json");
+  form.set("worker.mjs", new Blob([script], { type: "application/javascript+module" }), "worker.mjs");
+  const deployed = await api.request<Record<string, unknown>>(
+    `/accounts/${config.accountId}/workers/scripts/${encodeURIComponent(scriptName)}`,
+    { method: "PUT", body: form },
+  );
+  return output({ ...deployed, scriptName, deployed: true });
+});
+
+server.registerTool("set_worker_secret", {
+  description: "Create or replace an encrypted secret for a Cloudflare Worker without returning its value.",
+  inputSchema: {
+    scriptName: workerScriptName,
+    secretName: z.string().min(1).max(256).regex(/^[A-Za-z_][A-Za-z0-9_]*$/),
+    secretValue: z.string().min(1).max(65536).describe("Secret value; it is sent only to Cloudflare and is not returned"),
+    confirm,
+  },
+}, async ({ scriptName, secretName, secretValue }) => {
+  try {
+    await api.request(`/accounts/${config.accountId}/workers/scripts/${encodeURIComponent(scriptName)}/secrets`, {
+      method: "PUT",
+      body: JSON.stringify({ name: secretName, text: secretValue, type: "secret_text" }),
+    });
+  } catch {
+    throw new Error("Cloudflare Worker secret update failed");
+  }
+  return output({ scriptName, secretName, updated: true });
+});
+
+server.registerTool("get_worker_deployment", {
+  description: "Get the current deployment for a Cloudflare Worker script.",
+  inputSchema: { scriptName: workerScriptName },
+}, async ({ scriptName }) => output(await api.request(
+  `/accounts/${config.accountId}/workers/scripts/${encodeURIComponent(scriptName)}/deployments`,
+)));
 }
 
 await server.connect(new StdioServerTransport());
