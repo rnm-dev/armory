@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-25T13:47:01.802Z",
+  "updatedAt": "2026-08-31T09:06:10.193Z",
   "packages": [
     {
       "id": "heroboard",
@@ -1175,6 +1175,48 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/app-store-connect-v0.1.2/app-store-connect-0.1.2.tar.gz",
             "size": 429945,
             "sha256": "9453146a6069c5abce22b51f90ce89c61cd0dc841d2795194d1192eae386c5d5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "google-workspace",
+      "displayName": "Google Workspace",
+      "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-workspace/assets/icon.png",
+      "summary": "Find and edit shared Google Docs, Sheets, and Slides using a service account.",
+      "publisher": "rnm-dev",
+      "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-workspace",
+      "requirements": {
+        "credentials": true,
+        "hostWrites": false
+      },
+      "latest": "0.1.1",
+      "versions": [
+        {
+          "version": "0.1.1",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-workspace-v0.1.1/google-workspace-0.1.1.tar.gz",
+            "size": 573571,
+            "sha256": "2938b1aebedaf1b18bedc675569335e8f5f2f78696ba3f73c7681ada543aea9d"
           }
         }
       ]
