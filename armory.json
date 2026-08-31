@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "rnm-dev/armory",
-  "updatedAt": "2026-08-31T09:06:10.193Z",
+  "updatedAt": "2026-08-31T12:55:59.048Z",
   "packages": [
     {
       "id": "heroboard",
@@ -1190,7 +1190,7 @@
         "credentials": true,
         "hostWrites": false
       },
-      "latest": "0.1.1",
+      "latest": "0.1.2",
       "versions": [
         {
           "version": "0.1.1",
@@ -1217,6 +1217,33 @@
             "url": "https://github.com/rnm-dev/armory/releases/download/google-workspace-v0.1.1/google-workspace-0.1.1.tar.gz",
             "size": 573571,
             "sha256": "2938b1aebedaf1b18bedc675569335e8f5f2f78696ba3f73c7681ada543aea9d"
+          }
+        },
+        {
+          "version": "0.1.2",
+          "minPeonVersion": "0.0.1",
+          "platforms": [
+            {
+              "os": "darwin",
+              "arch": "arm64"
+            },
+            {
+              "os": "darwin",
+              "arch": "x64"
+            },
+            {
+              "os": "linux",
+              "arch": "arm64"
+            },
+            {
+              "os": "linux",
+              "arch": "x64"
+            }
+          ],
+          "archive": {
+            "url": "https://github.com/rnm-dev/armory/releases/download/google-workspace-v0.1.2/google-workspace-0.1.2.tar.gz",
+            "size": 573757,
+            "sha256": "40646431b4c79e8b0c93f8bc64064a049a3f6884067cd10642111b556f6769f4"
           }
         }
       ]
