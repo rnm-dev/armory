@@ -7,7 +7,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GoogleWorkspaceClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-workspace", version: "0.1.0" });
+const server = new McpServer({ name: "armory-google-workspace", version: "0.1.1" });
 const fileId = z.string().regex(/^[A-Za-z0-9_-]+$/).min(10).max(200);
 const range = z.string().min(1).max(1000);
 const jsonObject = z.record(z.string(), z.unknown());

@@ -1,6 +1,7 @@
 {
   "id": "google-workspace",
   "displayName": "Google Workspace",
+  "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/google-workspace/assets/icon.png",
   "summary": "Find and edit shared Google Docs, Sheets, and Slides using a service account.",
   "publisher": "rnm-dev",
   "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/google-workspace",

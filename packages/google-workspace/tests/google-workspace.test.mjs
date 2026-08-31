@@ -58,7 +58,7 @@ async function startApi() {
 
 test("configures the reusable service account and edits Docs, Sheets, and Slides", async () => {
   const fake = await startApi(); const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-workspace-"));
-  const packageInfo = { id: "google-workspace", version: "0.1.0", dir: packageDir, home };
+  const packageInfo = { id: "google-workspace", version: "0.1.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", GOOGLE_WORKSPACE_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_WORKSPACE_TEST_DRIVE_URL: `${fake.url}/drive`,
     GOOGLE_WORKSPACE_TEST_DOCS_URL: `${fake.url}/docs`, GOOGLE_WORKSPACE_TEST_SHEETS_URL: `${fake.url}/sheets`, GOOGLE_WORKSPACE_TEST_SLIDES_URL: `${fake.url}/slides` };
