@@ -58,7 +58,7 @@ async function startApi() {
 
 test("configures the reusable service account and edits Docs, Sheets, and Slides", async () => {
   const fake = await startApi(); const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-workspace-"));
-  const packageInfo = { id: "google-workspace", version: "0.1.1", dir: packageDir, home };
+  const packageInfo = { id: "google-workspace", version: "0.1.2", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", GOOGLE_WORKSPACE_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_WORKSPACE_TEST_DRIVE_URL: `${fake.url}/drive`,
     GOOGLE_WORKSPACE_TEST_DOCS_URL: `${fake.url}/docs`, GOOGLE_WORKSPACE_TEST_SHEETS_URL: `${fake.url}/sheets`, GOOGLE_WORKSPACE_TEST_SLIDES_URL: `${fake.url}/slides` };
@@ -94,4 +94,10 @@ test("configures the reusable service account and edits Docs, Sheets, and Slides
 test("manifest documents same-key reuse and requests no host filesystem access", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(packageDir, "armory.package.json"), "utf8"));
   assert.deepEqual(manifest.permissions.hostPaths, []); assert.match(manifest.configuration.fields[0].help, /same JSON key used for Google Play/);
+  assert.deepEqual(manifest.permissions.networkHosts, ["docs.googleapis.com", "oauth2.googleapis.com", "sheets.googleapis.com", "slides.googleapis.com", "www.googleapis.com"]);
+  const clientSource = await fs.readFile(path.join(packageDir, "src", "client.ts"), "utf8");
+  assert.match(clientSource, /setDefaultAutoSelectFamily\(false\)/);
+  assert.match(clientSource, /setDefaultResultOrder\("ipv4first"\)/);
+  assert.match(clientSource, /DRIVE: "https:\/\/www\.googleapis\.com\/drive\/v3"/);
+  assert.doesNotMatch(clientSource, /drive\.googleapis\.com/);
 });

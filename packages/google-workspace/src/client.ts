@@ -1,5 +1,12 @@
 import { createSign } from "node:crypto";
+import { setDefaultResultOrder } from "node:dns";
+import { setDefaultAutoSelectFamily } from "node:net";
 import type { ServiceAccountCredentials } from "./config.js";
+
+// Google's IPv6 routes are not consistently reachable from every Peon host.
+// Avoid Node's connection-family racing, which can otherwise stall until ETIMEDOUT.
+setDefaultResultOrder("ipv4first");
+setDefaultAutoSelectFamily(false);
 
 const SCOPES = [
   "https://www.googleapis.com/auth/documents",
@@ -8,7 +15,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
 ].join(" ");
 const URLS = {
-  TOKEN: "https://oauth2.googleapis.com/token", DRIVE: "https://drive.googleapis.com/drive/v3",
+  TOKEN: "https://oauth2.googleapis.com/token", DRIVE: "https://www.googleapis.com/drive/v3",
   DOCS: "https://docs.googleapis.com/v1", SHEETS: "https://sheets.googleapis.com/v4", SLIDES: "https://slides.googleapis.com/v1",
 };
 type Api = "DRIVE" | "DOCS" | "SHEETS" | "SLIDES";

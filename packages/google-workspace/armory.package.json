@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "google-workspace",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minPeonVersion": "0.0.1",
   "platforms": [
     { "os": "darwin", "arch": "arm64" },
@@ -10,7 +10,7 @@
     { "os": "linux", "arch": "x64" }
   ],
   "permissions": {
-    "networkHosts": ["docs.googleapis.com", "drive.googleapis.com", "oauth2.googleapis.com", "sheets.googleapis.com", "slides.googleapis.com"],
+    "networkHosts": ["docs.googleapis.com", "oauth2.googleapis.com", "sheets.googleapis.com", "slides.googleapis.com", "www.googleapis.com"],
     "hostPaths": []
   },
   "dependencies": [],
