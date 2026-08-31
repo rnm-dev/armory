@@ -1,0 +1,3 @@
+This package bundles @modelcontextprotocol/sdk and zod, plus their transitive
+runtime dependencies. See their published package licenses for the applicable
+notices.

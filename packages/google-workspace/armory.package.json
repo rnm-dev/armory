@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "google-workspace",
+  "version": "0.1.0",
+  "minPeonVersion": "0.0.1",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" },
+    { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" },
+    { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": {
+    "networkHosts": ["docs.googleapis.com", "drive.googleapis.com", "oauth2.googleapis.com", "sheets.googleapis.com", "slides.googleapis.com"],
+    "hostPaths": []
+  },
+  "dependencies": [],
+  "profile": { "type": "google-service-account", "requiredFields": ["serviceAccountJson"] },
+  "configuration": {
+    "fields": [{
+      "id": "serviceAccountJson",
+      "label": "Service account JSON",
+      "help": "You may select the same JSON key used for Google Play. Enable the Google Drive, Docs, Sheets, and Slides APIs in its Google Cloud project, then share each file or Shared Drive with the service account's client_email.",
+      "type": "file",
+      "required": true,
+      "validation": { "maxLength": 1048576 }
+    }],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/google-workspace.json"]
+  },
+  "mcp": {
+    "command": { "executable": "node", "args": ["dist/mcp.js"] },
+    "toolPrefix": "google_workspace",
+    "startupTimeoutMs": 15000,
+    "callTimeoutMs": 60000
+  }
+}
