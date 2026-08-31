@@ -7,7 +7,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GoogleWorkspaceClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-workspace", version: "0.1.2" });
+const server = new McpServer({ name: "armory-google-workspace", version: "0.1.3" });
 const fileId = z.string().regex(/^[A-Za-z0-9_-]+$/).min(10).max(200);
 const range = z.string().min(1).max(1000);
 const jsonObject = z.record(z.string(), z.unknown());
@@ -34,6 +34,28 @@ server.registerTool("search_files", {
     supportsAllDrives: true, includeItemsFromAllDrives: true });
   return output(await api.request("DRIVE", `/files?${params}`));
 });
+
+const createInput = { name: z.string().trim().min(1).max(255),
+  parentFolderId: fileId.optional().describe("A folder ID. Use a Shared Drive folder because service accounts normally have no personal Drive storage quota."),
+  confirmation };
+async function createWorkspaceFile(name: string, mimeType: string, parentFolderId?: string): Promise<unknown> {
+  const params = query({ supportsAllDrives: true, fields: "id,name,mimeType,webViewLink,driveId,parents,capabilities(canEdit)" });
+  return await api.request("DRIVE", `/files?${params}`, { method: "POST", body: JSON.stringify({
+    name, mimeType, ...(parentFolderId ? { parents: [parentFolderId] } : {}),
+  }) });
+}
+
+server.registerTool("create_document", {
+  description: "Create an empty Google Doc, optionally in a Shared Drive folder. Requires confirmation.", inputSchema: createInput,
+}, async ({ name, parentFolderId }) => output(await createWorkspaceFile(name, "application/vnd.google-apps.document", parentFolderId)));
+
+server.registerTool("create_spreadsheet", {
+  description: "Create an empty Google Sheet, optionally in a Shared Drive folder. Requires confirmation.", inputSchema: createInput,
+}, async ({ name, parentFolderId }) => output(await createWorkspaceFile(name, "application/vnd.google-apps.spreadsheet", parentFolderId)));
+
+server.registerTool("create_presentation", {
+  description: "Create an empty Google Slides presentation, optionally in a Shared Drive folder. Requires confirmation.", inputSchema: createInput,
+}, async ({ name, parentFolderId }) => output(await createWorkspaceFile(name, "application/vnd.google-apps.presentation", parentFolderId)));
 
 server.registerTool("get_document", { description: "Read a Google Doc, including its structural content.",
   inputSchema: { documentId: fileId, suggestionsViewMode: z.enum(["DEFAULT_FOR_CURRENT_ACCESS", "SUGGESTIONS_INLINE", "PREVIEW_SUGGESTIONS_ACCEPTED", "PREVIEW_WITHOUT_SUGGESTIONS"]).optional() } },

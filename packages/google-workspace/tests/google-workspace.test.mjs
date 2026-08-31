@@ -42,6 +42,10 @@ async function startApi() {
       if (q !== null) assert.match(q, /mimeType = 'application\/vnd\.google-apps\.document' or mimeType =/);
       res.end(JSON.stringify({ files: [{ id, name: "Plan" }] })); return;
     }
+    if (req.method === "POST" && req.url.startsWith("/drive/files?")) {
+      const input = JSON.parse(body); assert.equal(new URL(req.url, "http://localhost").searchParams.get("supportsAllDrives"), "true");
+      res.end(JSON.stringify({ id, name: input.name, mimeType: input.mimeType, parents: input.parents })); return;
+    }
     if (req.method === "GET" && req.url.startsWith(`/docs/documents/${id}`)) { res.end(JSON.stringify({ documentId: id, title: "Plan" })); return; }
     if (req.method === "POST" && req.url === `/docs/documents/${id}:batchUpdate`) { res.end(JSON.stringify({ documentId: id, replies: [] })); return; }
     if (req.method === "GET" && req.url.startsWith(`/sheets/spreadsheets/${id}/values/`)) { res.end(JSON.stringify({ range: "Sheet1!A1", values: [["A"]] })); return; }
@@ -58,7 +62,7 @@ async function startApi() {
 
 test("configures the reusable service account and edits Docs, Sheets, and Slides", async () => {
   const fake = await startApi(); const home = await fs.mkdtemp(path.join(os.tmpdir(), "armory-google-workspace-"));
-  const packageInfo = { id: "google-workspace", version: "0.1.2", dir: packageDir, home };
+  const packageInfo = { id: "google-workspace", version: "0.1.3", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = { NODE_ENV: "test", GOOGLE_WORKSPACE_TEST_TOKEN_URL: `${fake.url}/token`, GOOGLE_WORKSPACE_TEST_DRIVE_URL: `${fake.url}/drive`,
     GOOGLE_WORKSPACE_TEST_DOCS_URL: `${fake.url}/docs`, GOOGLE_WORKSPACE_TEST_SHEETS_URL: `${fake.url}/sheets`, GOOGLE_WORKSPACE_TEST_SLIDES_URL: `${fake.url}/slides` };
@@ -73,10 +77,14 @@ test("configures the reusable service account and edits Docs, Sheets, and Slides
     const client = new Client({ name: "test", version: "1" }); await client.connect(transport);
     try {
       const names = (await client.listTools()).tools.map((tool) => tool.name);
-      assert.deepEqual(names, ["search_files", "get_document", "batch_update_document", "get_spreadsheet", "get_sheet_values", "update_sheet_values",
+      assert.deepEqual(names, ["search_files", "create_document", "create_spreadsheet", "create_presentation", "get_document", "batch_update_document", "get_spreadsheet", "get_sheet_values", "update_sheet_values",
         "append_sheet_values", "batch_update_spreadsheet", "get_presentation", "batch_update_presentation"]);
       const calls = [
-        ["search_files", { search: "Plan" }], ["get_document", { documentId: id }],
+        ["search_files", { search: "Plan" }],
+        ["create_document", { name: "Contract", parentFolderId: id, confirmation: "CONFIRM_WORKSPACE_EDIT" }],
+        ["create_spreadsheet", { name: "Budget", parentFolderId: id, confirmation: "CONFIRM_WORKSPACE_EDIT" }],
+        ["create_presentation", { name: "Pitch", parentFolderId: id, confirmation: "CONFIRM_WORKSPACE_EDIT" }],
+        ["get_document", { documentId: id }],
         ["batch_update_document", { documentId: id, requests: [{ replaceAllText: { containsText: { text: "old", matchCase: true }, replaceText: "new" } }], confirmation: "CONFIRM_WORKSPACE_EDIT" }],
         ["get_spreadsheet", { spreadsheetId: id }], ["get_sheet_values", { spreadsheetId: id, range: "Sheet1!A1" }],
         ["update_sheet_values", { spreadsheetId: id, range: "Sheet1!A1", values: [["A"]], confirmation: "CONFIRM_WORKSPACE_EDIT" }],
@@ -88,6 +96,12 @@ test("configures the reusable service account and edits Docs, Sheets, and Slides
       for (const [name, args] of calls) assert.notEqual((await client.callTool({ name, arguments: args })).isError, true, name);
     } finally { await client.close(); }
     assert.equal(JSON.stringify(fake.requests).includes(privateKeySecret), false); assert.equal(JSON.stringify(fake.requests).includes(accessToken), true);
+    const creates = fake.requests.filter((request) => request.method === "POST" && request.url?.startsWith("/drive/files?"));
+    assert.deepEqual(creates.map((request) => JSON.parse(request.body)), [
+      { name: "Contract", mimeType: "application/vnd.google-apps.document", parents: [id] },
+      { name: "Budget", mimeType: "application/vnd.google-apps.spreadsheet", parents: [id] },
+      { name: "Pitch", mimeType: "application/vnd.google-apps.presentation", parents: [id] },
+    ]);
   } finally { await fs.rm(home, { recursive: true, force: true }); await fake.close(); }
 });
 
