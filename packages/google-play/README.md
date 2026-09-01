@@ -29,3 +29,17 @@ Every tool requires the Android `packageName` of the app to operate on; it is no
 - `update_rollout`: start, adjust, halt, or complete a release already active on a track.
 
 Read-only edit tools delete their temporary edit afterward. Google Play policy questionnaires are not exposed by the Android Publisher API and remain manual Console work. Upload tools only read regular, non-symlink files selected under the declared `~/Projects` permission; APK upload is not supported.
+
+### Image upload migration and safety
+
+`upload_image` accepts only `filePath`. The former `imageBase64` argument was
+removed in 0.3.0 and is not advertised as a compatibility alias: callers must
+write generated or attached image bytes to a file under `~/Projects` and pass
+its absolute path. This keeps image bytes out of MCP arguments and results.
+
+The package opens the selected file once, verifies that its resolved path stays
+under the authorized root, rejects direct symlinks and non-regular files,
+enforces the decoded 15 MiB limit, validates PNG/JPEG signatures against the
+extension, and detects replacement or mutation during the read. Upload results
+contain only bounded image metadata (`id`, optional `sha256` and optional
+`url`); file paths and image bytes are never returned.
