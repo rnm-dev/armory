@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "scout",
+  "version": "1.0.0",
+  "minPeonVersion": "1.0.3",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64" }, { "os": "darwin", "arch": "x64" },
+    { "os": "linux", "arch": "arm64" }, { "os": "linux", "arch": "x64" }
+  ],
+  "permissions": { "networkHosts": ["scout.rnm.dev"], "hostPaths": [] },
+  "dependencies": [],
+  "profile": { "type": "scout-api-key", "requiredFields": ["apiKey"] },
+  "configuration": {
+    "fields": [{ "id": "apiKey", "label": "Scout API key", "help": "Ask the Scout owner for an integration key.", "type": "secret", "required": true, "validation": { "maxLength": 4096 } }],
+    "handler": { "executable": "node", "args": ["dist/hooks/configure.js"] },
+    "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
+    "managedPaths": ["config/scout.json"]
+  },
+  "mcp": { "command": { "executable": "node", "args": ["dist/mcp.js"] }, "toolPrefix": "scout", "startupTimeoutMs": 15000, "callTimeoutMs": 60000 },
+  "background": { "protocol": "armory-workflows-v1", "command": { "executable": "node", "args": ["dist/workflow.js"] }, "pollIntervalSeconds": 30 }
+}

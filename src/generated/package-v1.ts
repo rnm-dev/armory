@@ -73,6 +73,7 @@ export interface ArmoryManifestV1 {
   configuration?: Configuration;
   lifecycle?: Lifecycle;
   mcp: Mcp;
+  background?: Background;
 }
 export interface Platform {
   os: "darwin" | "linux";
@@ -121,4 +122,9 @@ export interface Mcp {
   toolPrefix: string;
   startupTimeoutMs?: number;
   callTimeoutMs?: number;
+}
+export interface Background {
+  protocol: "armory-workflows-v1";
+  command: Command;
+  pollIntervalSeconds: 30;
 }

@@ -16,7 +16,8 @@
     "profile": { "$ref": "#/$defs/profile" },
     "configuration": { "$ref": "#/$defs/configuration" },
     "lifecycle": { "$ref": "#/$defs/lifecycle" },
-    "mcp": { "$ref": "#/$defs/mcp" }
+    "mcp": { "$ref": "#/$defs/mcp" },
+    "background": { "$ref": "#/$defs/background" }
   },
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
@@ -260,6 +261,16 @@
         "toolPrefix": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,62}$" },
         "startupTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 15000 },
         "callTimeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 }
+      }
+    },
+    "background": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "command", "pollIntervalSeconds"],
+      "properties": {
+        "protocol": { "const": "armory-workflows-v1" },
+        "command": { "$ref": "#/$defs/command" },
+        "pollIntervalSeconds": { "const": 30 }
       }
     }
   }

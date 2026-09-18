@@ -1,0 +1,9 @@
+{
+  "id": "scout",
+  "displayName": "Scout",
+  "iconUrl": "https://raw.githubusercontent.com/rnm-dev/armory/main/packages/scout/assets/icon.png",
+  "summary": "Work Scout CRM opportunities through supervised Peon sessions.",
+  "publisher": "rnm-dev",
+  "documentationUrl": "https://github.com/rnm-dev/armory/tree/main/packages/scout",
+  "requirements": { "credentials": true, "hostWrites": false }
+}
