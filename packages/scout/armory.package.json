@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "scout",
   "version": "1.0.0",
-  "minPeonVersion": "1.0.3",
+  "minPeonVersion": "1.0.0",
   "platforms": [
     { "os": "darwin", "arch": "arm64" }, { "os": "darwin", "arch": "x64" },
     { "os": "linux", "arch": "arm64" }, { "os": "linux", "arch": "x64" }
@@ -16,6 +16,5 @@
     "verifyHandler": { "executable": "node", "args": ["dist/hooks/verify.js"] },
     "managedPaths": ["config/scout.json"]
   },
-  "mcp": { "command": { "executable": "node", "args": ["dist/mcp.js"] }, "toolPrefix": "scout", "startupTimeoutMs": 15000, "callTimeoutMs": 60000 },
-  "background": { "protocol": "armory-workflows-v1", "command": { "executable": "node", "args": ["dist/workflow.js"] }, "pollIntervalSeconds": 30 }
+  "mcp": { "command": { "executable": "node", "args": ["dist/mcp.js"] }, "toolPrefix": "scout", "startupTimeoutMs": 15000, "callTimeoutMs": 60000 }
 }
