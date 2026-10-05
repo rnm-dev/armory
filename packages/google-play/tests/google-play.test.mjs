@@ -41,7 +41,10 @@ async function startGoogleApi() {
   const requests = [];
   let nextEdit = 0;
   const tracks = {
-    production: { track: "production", releases: [{ name: "1.0", versionCodes: ["100"], status: "inProgress", userFraction: 0.2 }] },
+    production: { track: "production", releases: [
+      { name: "1.0", versionCodes: ["100"], status: "inProgress", userFraction: 0.2 },
+      { name: "0.9", versionCodes: ["90"], status: "completed" },
+    ] },
     beta: { track: "beta", releases: [] },
   };
   const listings = { "en-US": { language: "en-US", title: "Example", shortDescription: "Before" } };
@@ -185,7 +188,7 @@ test("configures, verifies, inspects, and safely commits release changes without
   await fs.writeFile(bundlePath, "fake android app bundle");
   await fs.writeFile(outsideImagePath, "outside");
   await fs.symlink(outsideImagePath, linkedImagePath);
-  const packageInfo = { id: "google-play", version: "0.4.1", dir: packageDir, home };
+  const packageInfo = { id: "google-play", version: "0.5.1", dir: packageDir, home };
   const platform = { os: process.platform === "darwin" ? "darwin" : "linux", arch: process.arch === "arm64" ? "arm64" : "x64" };
   const env = {
     NODE_ENV: "test",
@@ -291,7 +294,7 @@ test("configures, verifies, inspects, and safely commits release changes without
     } finally { await client.close(); }
 
     assert.deepEqual(fake.tracks.beta.releases, [{ versionCodes: ["200"], name: "2.0 beta", status: "draft", releaseNotes: [{ language: "en-US", text: "New build" }] }]);
-    assert.equal(fake.tracks.production.releases[0].status, "completed");
+    assert.deepEqual(fake.tracks.production.releases, [{ name: "1.0", versionCodes: ["100"], status: "completed" }]);
     assert.equal(fake.listings["en-US"].shortDescription, "After");
     assert.deepEqual(fake.images["en-US/phoneScreenshots"].map((image) => image.id), ["new-image-1", "new-image-2"]);
     assert.deepEqual(fake.bundles, [{ versionCode: "200", sha256: "bundle-sha", bytes: 23 }]);

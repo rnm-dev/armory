@@ -232,6 +232,9 @@ export class GooglePlayClient {
       release.status = change.status;
       if (change.status === "inProgress" || change.status === "halted") release.userFraction = change.userFraction;
       else delete release.userFraction;
+      if (change.status === "completed") {
+        track.releases = track.releases?.filter((item) => item === release || item.status !== "completed");
+      }
       await this.request<Track>(trackPath, { method: "PUT", body: JSON.stringify(track) });
       await this.request(`${this.editPath(packageName, editId)}:validate`, { method: "POST", body: "{}" });
       const result = await this.request(`${this.editPath(packageName, editId)}:commit`, { method: "POST", body: "{}" });
