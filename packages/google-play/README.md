@@ -26,6 +26,7 @@ Every tool requires the Android `packageName` of the app to operate on; it is no
 - `update_data_safety`: submit the complete Data Safety CSV declaration. The Google API is write-only and does not expose the current declaration.
 - `convert_region_prices`: preview region-specific prices from a tax-exclusive base price without changing a product.
 - `promote_release`: add existing version codes to a target track as a draft, staged, or completed release.
+- `replace_draft_release`: atomically replace the single existing draft on a track, including its version codes, name, priority, and localized release notes.
 - `update_rollout`: start, adjust, halt, or complete a release already active on a track.
 
 Read-only edit tools delete their temporary edit afterward. Google Play policy questionnaires are not exposed by the Android Publisher API and remain manual Console work. Upload tools only read regular, non-symlink files selected under the declared `~/Projects` permission; APK upload is not supported.

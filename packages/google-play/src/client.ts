@@ -263,4 +263,17 @@ export class GooglePlayClient {
       if (!committed) await this.deleteEdit(packageName, editId).catch(() => undefined);
     }
   }
+
+  async replaceDraftRelease(packageName: string, trackName: string, release: Release): Promise<unknown> {
+    return await this.committedEdit(packageName, async (editId) => {
+      const trackPath = `${this.editPath(packageName, editId)}/tracks/${encodeURIComponent(trackName)}`;
+      const track = await this.request<Track>(trackPath);
+      const drafts = track.releases?.filter((item) => item.status === "draft") ?? [];
+      if (drafts.length === 0) throw new Error(`Track ${trackName} has no draft release to replace`);
+      if (drafts.length > 1) throw new Error(`Track ${trackName} has more than one draft release`);
+      track.track = trackName;
+      track.releases = [...(track.releases ?? []).filter((item) => item.status !== "draft"), release];
+      return await this.request<Track>(trackPath, { method: "PUT", body: JSON.stringify(track) });
+    });
+  }
 }

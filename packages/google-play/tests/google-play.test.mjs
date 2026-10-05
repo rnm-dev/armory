@@ -215,7 +215,7 @@ test("configures, verifies, inspects, and safely commits release changes without
     try {
       await client.connect(transport);
       const listed = await client.listTools();
-      assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "list_listings", "update_listing", "list_images", "upload_image", "upload_bundle", "get_bundle_upload_status", "delete_image", "update_data_safety", "convert_region_prices", "promote_release", "update_rollout"]);
+      assert.deepEqual(listed.tools.map((tool) => tool.name), ["list_releases", "list_tracks", "list_listings", "update_listing", "list_images", "upload_image", "upload_bundle", "get_bundle_upload_status", "delete_image", "update_data_safety", "convert_region_prices", "promote_release", "replace_draft_release", "update_rollout"]);
       await client.callTool({ name: "list_releases", arguments: { packageName: defaultPackage } });
       await client.callTool({ name: "list_tracks", arguments: { packageName: defaultPackage } });
       await client.callTool({ name: "list_listings", arguments: { packageName: defaultPackage } });
@@ -286,10 +286,11 @@ test("configures, verifies, inspects, and safely commits release changes without
       await client.callTool({ name: "update_data_safety", arguments: { packageName: defaultPackage, safetyLabelsCsv: "Question,Answer\nexample,true", confirmation: "CONFIRM_PLAY_CONSOLE_CHANGE" } });
       await client.callTool({ name: "convert_region_prices", arguments: { packageName: defaultPackage, currencyCode: "USD", units: "5", nanos: 990000000 } });
       await client.callTool({ name: "promote_release", arguments: { packageName: defaultPackage, targetTrack: "beta", versionCodes: ["100"], name: "1.0 beta", status: "draft", confirmation: "CONFIRM_RELEASE_CHANGE" } });
+      await client.callTool({ name: "replace_draft_release", arguments: { packageName: defaultPackage, track: "beta", versionCodes: ["200"], name: "2.0 beta", releaseNotes: [{ language: "en-US", text: "New build" }], confirmation: "CONFIRM_RELEASE_CHANGE" } });
       await client.callTool({ name: "update_rollout", arguments: { packageName: defaultPackage, track: "production", versionCode: "100", status: "completed", confirmation: "CONFIRM_RELEASE_CHANGE" } });
     } finally { await client.close(); }
 
-    assert.equal(fake.tracks.beta.releases[0].status, "draft");
+    assert.deepEqual(fake.tracks.beta.releases, [{ versionCodes: ["200"], name: "2.0 beta", status: "draft", releaseNotes: [{ language: "en-US", text: "New build" }] }]);
     assert.equal(fake.tracks.production.releases[0].status, "completed");
     assert.equal(fake.listings["en-US"].shortDescription, "After");
     assert.deepEqual(fake.images["en-US/phoneScreenshots"].map((image) => image.id), ["new-image-1", "new-image-2"]);
@@ -298,8 +299,8 @@ test("configures, verifies, inspects, and safely commits release changes without
     assert.equal(fake.convertedPrice.price.currencyCode, "USD");
     assert.equal("userFraction" in fake.tracks.production.releases[0], false);
     assert(fake.requests.some((request) => request.method === "DELETE"));
-    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":validate")).length, 7);
-    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":commit")).length, 7);
+    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":validate")).length, 8);
+    assert.equal(fake.requests.filter((request) => request.url?.endsWith(":commit")).length, 8);
     const imageUploads = fake.requests.filter((request) => request.url?.includes("/listings/en-US/phoneScreenshots?"));
     assert.deepEqual(imageUploads.map((request) => request.contentType), ["image/png", "image/jpeg"]);
     assert.equal(fake.requests.some((request) => request.url?.includes("/tracks/production/releases")), false);

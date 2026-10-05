@@ -12,7 +12,7 @@ import { readConfig } from "./config.js";
 const home = process.env.PEON_ARMORY_HOME;
 if (!home) throw new Error("PEON_ARMORY_HOME is required");
 const api = new GooglePlayClient(await readConfig(home));
-const server = new McpServer({ name: "armory-google-play", version: "0.4.0" });
+const server = new McpServer({ name: "armory-google-play", version: "0.5.0" });
 const packageName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/).max(255);
 const track = z.string().min(1).max(255);
 const versionCode = z.string().regex(/^[1-9][0-9]*$/).max(20);
@@ -255,6 +255,24 @@ server.registerTool("promote_release", {
     ...(inAppUpdatePriority !== undefined ? { inAppUpdatePriority } : {}), ...(releaseNotes ? { releaseNotes } : {}),
   }));
 });
+
+server.registerTool("replace_draft_release", {
+  description: "Replace the single existing draft release on a track and commit the change. Use this when Google Play rejects a second draft. This affects app distribution and requires explicit confirmation.",
+  inputSchema: {
+    packageName,
+    track,
+    versionCodes: z.array(versionCode).min(1).max(100),
+    name: z.string().min(1).max(200).optional(),
+    inAppUpdatePriority: z.number().int().min(0).max(5).optional(),
+    releaseNotes: z.array(z.object({ language: z.string().min(2).max(35), text: z.string().min(1).max(500) })).max(100).optional(),
+    confirmation,
+  },
+}, async ({ packageName, track, versionCodes, name, inAppUpdatePriority, releaseNotes }) => output(await api.replaceDraftRelease(
+  packageName,
+  track,
+  { versionCodes, status: "draft", ...(name ? { name } : {}),
+    ...(inAppUpdatePriority !== undefined ? { inAppUpdatePriority } : {}), ...(releaseNotes ? { releaseNotes } : {}) },
+)));
 
 server.registerTool("update_rollout", {
   description: "Start, adjust, halt, or complete an active release rollout and commit the change. This affects users and requires explicit confirmation.",
